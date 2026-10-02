@@ -1,0 +1,43 @@
+{
+  "contract": "1.0.0",
+  "flavor": "core",
+  "milestone": null,
+  "phases": [
+    {
+      "number": "1",
+      "name": "Secure Foundation and Firebase Access",
+      "status": "pending"
+    },
+    {
+      "number": "2",
+      "name": "Synthetic Kidney Data and Firestore",
+      "status": "pending"
+    },
+    {
+      "number": "3",
+      "name": "Clinical Rules and AKI Prediction",
+      "status": "pending"
+    },
+    {
+      "number": "4",
+      "name": "Risk-Ranked Doctor Dashboard",
+      "status": "pending"
+    },
+    {
+      "number": "5",
+      "name": "Patient Digital Twin Detail",
+      "status": "pending"
+    },
+    {
+      "number": "6",
+      "name": "Leakage-Resistant Model Evaluation",
+      "status": "pending"
+    }
+  ],
+  "next": {
+    "command": "/gsd:progress --next",
+    "label": "Advance to the next step (verify)",
+    "reason": "Phase 1 of 6 · 0% · ready to verify"
+  },
+  "updated_at": "2026-10-02T18:25:22.125Z"
+}

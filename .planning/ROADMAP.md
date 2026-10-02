@@ -4,6 +4,13 @@
 
 TwinBean advances through six vertical phases: establish a secure runnable application boundary, build synthetic kidney data in Firestore, add clinically explicit prediction outputs, deliver risk-ranked doctor workflows, complete the patient digital-twin view, and finish with leakage-resistant comparative evaluation using actual model results.
 
+## Delivery Workflow
+
+- GSD owns requirements, milestones, plans, and progress state; Codex owns implementation and verification.
+- Every implementation task follows an implement, check, fix loop with at most three failed checks. A third failure becomes a reported blocker; tests are never weakened to pass.
+- Design skills are loaded only for frontend work: Taste for direction, Emil Kowalski guidance for restrained interactions, then Impeccable for audit and refinement of a working interface.
+- UI refinement must preserve medical logic, authorization behavior, and prediction outputs.
+
 ## Phases
 
 **Phase Numbering:**
@@ -34,9 +41,9 @@ TwinBean advances through six vertical phases: establish a secure runnable appli
 **UI hint:** yes
 
 Plans:
-- [ ] 01-01: Scaffold locally runnable Next.js and FastAPI applications with configuration boundaries.
-- [ ] 01-02: Implement Firebase browser authentication and server-side doctor-role enforcement.
-- [ ] 01-03: Add trusted role-assignment tooling, security tests, local verification, and concise setup documentation.
+- [x] 01-01: Scaffold locally runnable Next.js and FastAPI applications with configuration boundaries.
+- [x] 01-02: Implement Firebase browser authentication and server-side doctor-role enforcement.
+- [x] 01-03: Add trusted role-assignment tooling, security tests, local verification, and concise setup documentation.
 
 ### Phase 2: Synthetic Kidney Data and Firestore
 **Goal:** Authorized doctors can access synthetic CKD patient histories and a separately modeled simulated IoT stream stored in Firestore.
@@ -70,7 +77,7 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. Doctor can view every monitored synthetic patient from one dashboard.
   2. Patients with valid predictions default to descending 24-hour AKI risk order without hiding other patients.
-  3. Patients lacking a valid prediction display “Risk unavailable,” never a numeric zero-risk substitute.
+  3. Patients lacking a valid prediction display ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œRisk unavailable,ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â never a numeric zero-risk substitute.
   4. Doctor can see prediction time and missing or stale data warnings before opening a patient.
 **Plans:** TBD
 **UI hint:** yes
@@ -102,11 +109,11 @@ Plans:
 
 ## Progress
 
-**Execution Order:** Phase 1 → Phase 2 → Phase 3 → Phase 4 → Phase 5; Phase 6 begins after Phase 3 and completes the milestone.
+**Execution Order:** Phase 1 ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ Phase 2 ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ Phase 3 ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ Phase 4 ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ Phase 5; Phase 6 begins after Phase 3 and completes the milestone.
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Secure Foundation and Firebase Access | 0/3 | Not started | - |
+| 1. Secure Foundation and Firebase Access | 3/3 | Awaiting live Firebase check | - |
 | 2. Synthetic Kidney Data and Firestore | 0/TBD | Not started | - |
 | 3. Clinical Rules and AKI Prediction | 0/TBD | Not started | - |
 | 4. Risk-Ranked Doctor Dashboard | 0/TBD | Not started | - |
