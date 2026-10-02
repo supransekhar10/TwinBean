@@ -17,7 +17,17 @@ function friendlyAuthError(error: unknown): string {
   if (error instanceof Error && error.message.includes("auth/invalid-credential")) {
     return "Email or password was not accepted. Check the account and try again.";
   }
-  return error instanceof Error ? error.message : "Sign-in failed. Try again.";
+  return "Sign-in could not be completed. Try again.";
+}
+
+function friendlyAccessError(error: unknown): string {
+  if (error instanceof Error && error.message.includes("Doctor access is required")) {
+    return "This account is not approved as a doctor. Ask an administrator to assign the role, then refresh the role token.";
+  }
+  if (error instanceof Error && error.message.includes("invalid or expired")) {
+    return "Your session has expired. Sign out, then sign in again.";
+  }
+  return "The protected API could not be reached. Check that the backend is running and try again.";
 }
 
 export function AuthPanel() {
@@ -64,13 +74,13 @@ export function AuthPanel() {
       setHealth(await fetchDoctorHealth(token));
       setRequestState("success");
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Access check failed.");
+      setMessage(friendlyAccessError(error));
       setRequestState("error");
     }
   }
 
   if (!authReady) {
-    return <p className="status-line" role="status">Checking sign-in statusâ€¦</p>;
+    return <p className="status-line" role="status">Checking sign-in status...</p>;
   }
 
   if (user) {
@@ -114,7 +124,7 @@ export function AuthPanel() {
             onClick={() => checkAccess(false)}
             type="button"
           >
-            {requestState === "working" ? "Checking accessâ€¦" : "Check protected API"}
+            {requestState === "working" ? "Checking access..." : "Check protected API"}
           </button>
           <button
             className="secondary-button"
@@ -170,11 +180,9 @@ export function AuthPanel() {
       {message && <p className="error-message" role="alert">{message}</p>}
 
       <button className="primary-button primary-button--full" disabled={requestState === "working"} type="submit">
-        {requestState === "working" ? "Signing inâ€¦" : "Sign in"}
+        {requestState === "working" ? "Signing in..." : "Sign in"}
       </button>
       <p className="form-note">Access also requires a server-assigned doctor role.</p>
     </form>
   );
 }
-
-

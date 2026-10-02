@@ -8,7 +8,7 @@ export default function Home() {
           <span className="wordmark-mark" aria-hidden="true">TB</span>
           <span>TwinBean</span>
         </a>
-        <span className="prototype-label">Research prototype Â· synthetic data only</span>
+        <span className="prototype-label">Research prototype / synthetic data only</span>
       </header>
 
       <div className="content-grid" id="main-content">
@@ -43,5 +43,3 @@ export default function Home() {
     </main>
   );
 }
-
-
