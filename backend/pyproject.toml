@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "twinbean-backend"
+version = "0.1.0"
+description = "TwinBean doctor-authorized API skeleton"
+requires-python = ">=3.12"
+dependencies = [
+  "fastapi>=0.117,<1",
+  "firebase-admin>=7,<8",
+  "python-dotenv>=1,<2",
+  "uvicorn[standard]>=0.35,<1"
+]
+
+[project.optional-dependencies]
+dev = [
+  "httpx>=0.28,<1",
+  "pytest>=8,<9"
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.setuptools.packages.find]
+include = ["app*", "scripts*"]

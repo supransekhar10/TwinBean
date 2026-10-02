@@ -1,0 +1,24 @@
+# Frontend
+frontend/node_modules/
+frontend/.next/
+frontend/coverage/
+frontend/.env*
+!frontend/.env.example
+
+# Backend
+backend/.venv/
+backend/.pytest_cache/
+backend/**/__pycache__/
+backend/.env*
+!backend/.env.example
+
+# Firebase credentials
+*service-account*.json
+*firebase-adminsdk*.json
+firebase-admin-key.json
+
+# Local tooling
+.impeccable/review/
+
+# GSD runtime locks
+.planning/milestone.lock
