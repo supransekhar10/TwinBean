@@ -1,0 +1,114 @@
+# Roadmap: TwinBean
+
+## Overview
+
+TwinBean advances through six vertical phases: establish a secure runnable application boundary, build synthetic kidney data in Firestore, add clinically explicit prediction outputs, deliver risk-ranked doctor workflows, complete the patient digital-twin view, and finish with leakage-resistant comparative evaluation using actual model results.
+
+## Phases
+
+**Phase Numbering:**
+- Integer phases are planned milestone work.
+- Decimal phases are reserved for urgent insertions.
+
+- [ ] **Phase 1: Secure Foundation and Firebase Access** - Run both applications locally and prove doctor-only authenticated backend access.
+- [ ] **Phase 2: Synthetic Kidney Data and Firestore** - Persist separate synthetic EHR and IoT streams behind doctor-only access.
+- [ ] **Phase 3: Clinical Rules and AKI Prediction** - Produce distinct clinical-rule and 24-hour AKI prediction results with safe unavailable states.
+- [ ] **Phase 4: Risk-Ranked Doctor Dashboard** - Let doctors review every monitored patient with valid risks prioritized safely.
+- [ ] **Phase 5: Patient Digital Twin Detail** - Present history, trends, rules, predictions, warnings, and explanations in distinct sections.
+- [ ] **Phase 6: Leakage-Resistant Model Evaluation** - Report actual patient-level, time-safe EHR-only and combined-stream evaluation results.
+
+## Phase Details
+
+### Phase 1: Secure Foundation and Firebase Access
+**Goal:** Doctors can sign in to a locally runnable frontend and successfully call a doctor-authorized FastAPI health endpoint.
+**Mode:** mvp
+**Depends on:** Nothing (first phase)
+**Requirements:** FOUND-01, FOUND-02, FOUND-03, AUTH-01, AUTH-02, AUTH-03, AUTH-04, AUTH-05, AUTH-06, AUTH-07, AUTH-08, FIRE-02, FIRE-03, FIRE-04
+**Success Criteria** (what must be TRUE):
+  1. Developer can start the Next.js frontend and FastAPI backend locally using documented configuration.
+  2. Doctor can sign in and sign out with Firebase email/password authentication.
+  3. Signed-in doctor with `role: doctor` can call the protected backend health endpoint; missing, invalid, or unauthorized tokens are rejected.
+  4. Administrator can grant the doctor claim with a trusted script and follow the documented token-refresh process for a demo account.
+  5. Service-account credentials remain backend-only and absent from Git.
+**Plans:** 3 plans
+**UI hint:** yes
+
+Plans:
+- [ ] 01-01: Scaffold locally runnable Next.js and FastAPI applications with configuration boundaries.
+- [ ] 01-02: Implement Firebase browser authentication and server-side doctor-role enforcement.
+- [ ] 01-03: Add trusted role-assignment tooling, security tests, local verification, and concise setup documentation.
+
+### Phase 2: Synthetic Kidney Data and Firestore
+**Goal:** Authorized doctors can access synthetic CKD patient histories and a separately modeled simulated IoT stream stored in Firestore.
+**Mode:** mvp
+**Depends on:** Phase 1
+**Requirements:** FIRE-01, FIRE-05, DATA-01, DATA-02, DATA-03
+**Success Criteria** (what must be TRUE):
+  1. System loads reproducible synthetic adult CKD histories without using real patient data.
+  2. System produces simulated IoT observations as a stream distinct from EHR history.
+  3. Prototype data is persisted in Cloud Firestore, with no SQLite dependency.
+  4. Only authenticated users carrying the doctor role can read patient data through the backend.
+**Plans:** TBD
+
+### Phase 3: Clinical Rules and AKI Prediction
+**Goal:** The system generates auditable current-rule results and valid 24-hour AKI predictions as separate clinical concepts.
+**Mode:** mvp
+**Depends on:** Phase 2
+**Requirements:** PRED-01, PRED-02, PRED-03, PRED-04, PRED-05
+**Success Criteria** (what must be TRUE):
+  1. A valid synthetic adult CKD record can receive an XGBoost-based prediction for new AKI within 24 hours.
+  2. Missing, invalid, or stale inputs produce an explicit unavailable result rather than a zero-risk score.
+  3. Current clinical rule outputs are calculated, stored, and returned separately from future risk predictions.
+  4. Every valid prediction records its prediction time and produces SHAP feature-attribution data.
+**Plans:** TBD
+
+### Phase 4: Risk-Ranked Doctor Dashboard
+**Goal:** Doctors can triage all monitored patients while seeing valid future risk, prediction freshness, and data-quality limitations honestly.
+**Mode:** mvp
+**Depends on:** Phase 3
+**Requirements:** DASH-01, DASH-02, DASH-03, DASH-04, DASH-05
+**Success Criteria** (what must be TRUE):
+  1. Doctor can view every monitored synthetic patient from one dashboard.
+  2. Patients with valid predictions default to descending 24-hour AKI risk order without hiding other patients.
+  3. Patients lacking a valid prediction display “Risk unavailable,” never a numeric zero-risk substitute.
+  4. Doctor can see prediction time and missing or stale data warnings before opening a patient.
+**Plans:** TBD
+**UI hint:** yes
+
+### Phase 5: Patient Digital Twin Detail
+**Goal:** Doctors can inspect a simulated patient's complete kidney context without conflating observations, clinical rules, future risk, or explanations.
+**Mode:** mvp
+**Depends on:** Phase 4
+**Requirements:** PAT-01, PAT-02, PAT-03, PAT-04, PAT-05
+**Success Criteria** (what must be TRUE):
+  1. Doctor can open a patient detail page from the dashboard.
+  2. Synthetic history and IoT trends appear in separate, clearly labeled sections and visualizations.
+  3. Current clinical rule status and future AKI prediction appear separately with prediction time and data-quality warnings.
+  4. SHAP explanations appear separately from the prediction score and identify the features influencing a valid result.
+**Plans:** TBD
+**UI hint:** yes
+
+### Phase 6: Leakage-Resistant Model Evaluation
+**Goal:** Researchers can inspect reproducible, actual evaluation results that fairly compare EHR-only and combined-stream prediction.
+**Mode:** mvp
+**Depends on:** Phase 3
+**Requirements:** EVAL-01, EVAL-02, EVAL-03, EVAL-04, EVAL-05, EVAL-06
+**Success Criteria** (what must be TRUE):
+  1. Evaluation holds out entire simulated patients rather than mixing one patient's records across dataset splits.
+  2. Feature construction uses only observations available at each prediction time and demonstrates checks against future-data leakage.
+  3. The same held-out patients are used to compare EHR-history-only and combined EHR-plus-IoT models.
+  4. Generated report records dataset construction, split strategy, metrics, limitations, and actual model-run results without placeholder claims.
+**Plans:** TBD
+
+## Progress
+
+**Execution Order:** Phase 1 → Phase 2 → Phase 3 → Phase 4 → Phase 5; Phase 6 begins after Phase 3 and completes the milestone.
+
+| Phase | Plans Complete | Status | Completed |
+|-------|----------------|--------|-----------|
+| 1. Secure Foundation and Firebase Access | 0/3 | Not started | - |
+| 2. Synthetic Kidney Data and Firestore | 0/TBD | Not started | - |
+| 3. Clinical Rules and AKI Prediction | 0/TBD | Not started | - |
+| 4. Risk-Ranked Doctor Dashboard | 0/TBD | Not started | - |
+| 5. Patient Digital Twin Detail | 0/TBD | Not started | - |
+| 6. Leakage-Resistant Model Evaluation | 0/TBD | Not started | - |
