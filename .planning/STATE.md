@@ -4,10 +4,10 @@ current_phase: 1
 current_phase_name: Secure Foundation and Firebase Access
 status: verifying
 stopped_at: Roadmap created; Phase 1 ready to plan
-last_updated: "2026-10-02T18:35:27.321Z"
+last_updated: "2026-10-02T18:46:55.563Z"
 last_activity: 2026-10-02
 last_activity_desc: Phase 1 execution started
-state_head: abad4e0bc3a5f0bfcac87d00246d900da9e82c13
+state_head: 2904e908c096b77f162ea4fa21f7784e90da215e
 progress:
   total_phases: 6
   completed_phases: 0
@@ -67,8 +67,7 @@ None yet.
 
 ### Blockers/Concerns
 
-- Firebase project values and a demo account are external setup prerequisites for live end-to-end authentication verification.
-- Phase 1 mobile UI verification: at 390x844 the prototype label, lede copy, and right footer label overflow horizontally after three bounded review attempts; desktop passes. Live Firebase demo-account verification also remains manual.
+- Phase 1 awaits the live Firebase demo-account check: sign in, assign role: doctor with the trusted script, refresh the ID token, confirm protected access, and sign out.
 
 ## Deferred Items
 

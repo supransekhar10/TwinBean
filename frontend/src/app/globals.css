@@ -41,6 +41,8 @@ button, a, input {
 :focus-visible { outline: 3px solid var(--focus); }
 
 .page-shell {
+  width: 100%;
+  min-width: 0;
   min-height: 100svh;
   display: grid;
   grid-template-rows: auto 1fr auto;
@@ -54,6 +56,14 @@ button, a, input {
   justify-content: space-between;
   min-height: 72px;
   border-bottom: 1px solid var(--line);
+  gap: 1rem;
+  min-width: 0;
+}
+
+.product-bar > *,
+.page-footer > * {
+  min-width: 0;
+  max-width: 100%;
 }
 
 .wordmark {
@@ -86,16 +96,27 @@ button, a, input {
   font-size: 0.78rem;
 }
 
-.prototype-label { font-weight: 600; }
+.prototype-label {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
 
 .content-grid {
   width: min(1120px, 100%);
+  min-width: 0;
+  max-width: 100%;
   margin: auto;
   padding: clamp(3rem, 7vw, 7.5rem) 0;
   display: grid;
   grid-template-columns: minmax(0, 1.2fr) minmax(340px, 0.8fr);
   gap: clamp(3rem, 8vw, 7rem);
   align-items: center;
+}
+
+.intro-copy,
+.auth-panel {
+  min-width: 0;
+  max-width: 100%;
 }
 
 .context-label {
@@ -124,7 +145,9 @@ h2 {
 }
 
 .lede {
+  width: 100%;
   max-width: 62ch;
+  overflow-wrap: anywhere;
   margin-bottom: 2.5rem;
   color: var(--muted);
   font-size: clamp(1rem, 1.4vw, 1.15rem);
@@ -238,14 +261,36 @@ button:disabled { cursor: wait; opacity: 0.62; transform: none; }
 
 @media (max-width: 560px) {
   .page-shell { padding: 0 1rem; }
-  .product-bar { align-items: flex-start; gap: 1rem; padding: 1rem 0; }
-  .prototype-label { max-width: 19ch; text-align: right; }
+  .product-bar {
+    align-items: flex-start;
+    flex-wrap: wrap;
+    padding: 1rem 0;
+  }
+  .prototype-label {
+    flex: 1 1 12rem;
+    max-width: min(19ch, 100%);
+    margin-left: auto;
+    text-align: right;
+  }
   .content-grid { padding: 2.5rem 0; }
   h1 { font-size: 2.65rem; }
   .panel-heading { display: block; }
   .status-chip { display: inline-block; margin-top: 1rem; }
   .identity-row { grid-template-columns: 1fr; }
   .button-row > button { width: 100%; }
+  .page-footer {
+    flex-wrap: wrap;
+    gap: 0.5rem 1rem;
+    padding: 0.75rem 0;
+  }
+  .page-footer span {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+  }
+  .page-footer span:last-child {
+    margin-left: auto;
+    text-align: right;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -258,5 +303,3 @@ button:disabled { cursor: wait; opacity: 0.62; transform: none; }
   .secondary-button:active,
   .text-button:active { transform: none; }
 }
-
-

@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "test": "vitest run"
+    "test": "vitest run",
+    "verify:layout": "node scripts/verify-layout.mjs"
   },
   "dependencies": {
     "@firebase/app": "0.16.2",
@@ -24,10 +25,9 @@
     "eslint": "^9.0.0",
     "eslint-config-next": "16.3.8",
     "jsdom": "^27.0.0",
+    "playwright-core": "1.63.0",
     "tailwindcss": "4.3.3",
     "typescript": "^5.9.0",
     "vitest": "^4.0.0"
   }
 }
-
-
