@@ -7,27 +7,27 @@
 
 ### Application Foundation
 
-- [ ] **FOUND-01**: Developer can run a Next.js application using TypeScript and Tailwind CSS locally.
-- [ ] **FOUND-02**: Developer can run a Python FastAPI service locally.
-- [ ] **FOUND-03**: Frontend can call the backend through a documented local configuration.
+- [x] **FOUND-01**: Developer can run a Next.js application using TypeScript and Tailwind CSS locally.
+- [x] **FOUND-02**: Developer can run a Python FastAPI service locally.
+- [x] **FOUND-03**: Frontend can call the backend through a documented local configuration.
 
 ### Authentication and Authorization
 
-- [ ] **AUTH-01**: Doctor can sign in with a Firebase email/password account.
-- [ ] **AUTH-02**: Signed-in doctor can sign out and the frontend clears the authenticated session.
-- [ ] **AUTH-03**: Frontend sends the current Firebase ID token to protected backend endpoints.
-- [ ] **AUTH-04**: Backend verifies Firebase ID tokens using the Firebase Admin SDK before serving protected endpoints.
-- [ ] **AUTH-05**: Backend denies protected access unless the verified token contains `role: doctor`.
-- [ ] **AUTH-06**: Administrator can assign `role: doctor` through a trusted backend-only Admin SDK script.
-- [ ] **AUTH-07**: User cannot assign or modify their own authorization role.
-- [ ] **AUTH-08**: Doctor can call an authenticated health endpoint and receive a successful response only with a valid authorized token.
+- [x] **AUTH-01**: Doctor can sign in with a Firebase email/password account.
+- [x] **AUTH-02**: Signed-in doctor can sign out and the frontend clears the authenticated session.
+- [x] **AUTH-03**: Frontend sends the current Firebase ID token to protected backend endpoints.
+- [x] **AUTH-04**: Backend verifies Firebase ID tokens using the Firebase Admin SDK before serving protected endpoints.
+- [x] **AUTH-05**: Backend denies protected access unless the verified token contains `role: doctor`.
+- [x] **AUTH-06**: Administrator can assign `role: doctor` through a trusted backend-only Admin SDK script.
+- [x] **AUTH-07**: User cannot assign or modify their own authorization role.
+- [x] **AUTH-08**: Doctor can call an authenticated health endpoint and receive a successful response only with a valid authorized token.
 
 ### Firebase Setup and Security
 
 - [ ] **FIRE-01**: Backend accesses Cloud Firestore through the Firebase Admin SDK.
-- [ ] **FIRE-02**: Service-account credentials remain backend-only, are excluded from Git, and are never exposed to the browser.
-- [ ] **FIRE-03**: Setup documentation explains Firebase project configuration, email/password enablement, environment variables, and local startup.
-- [ ] **FIRE-04**: Setup documentation explains how to approve a demo doctor account and refresh its ID token after assigning the claim.
+- [x] **FIRE-02**: Service-account credentials remain backend-only, are excluded from Git, and are never exposed to the browser.
+- [x] **FIRE-03**: Setup documentation explains Firebase project configuration, email/password enablement, environment variables, and local startup.
+- [x] **FIRE-04**: Setup documentation explains how to approve a demo doctor account and refresh its ID token after assigning the claim.
 - [ ] **FIRE-05**: Patient data access is limited to authenticated users authorized as doctors.
 
 ### Doctor Dashboard
@@ -95,21 +95,21 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| FOUND-01 | Phase 1 | Pending |
-| FOUND-02 | Phase 1 | Pending |
-| FOUND-03 | Phase 1 | Pending |
-| AUTH-01 | Phase 1 | Pending |
-| AUTH-02 | Phase 1 | Pending |
-| AUTH-03 | Phase 1 | Pending |
-| AUTH-04 | Phase 1 | Pending |
-| AUTH-05 | Phase 1 | Pending |
-| AUTH-06 | Phase 1 | Pending |
-| AUTH-07 | Phase 1 | Pending |
-| AUTH-08 | Phase 1 | Pending |
+| FOUND-01 | Phase 1 | Complete |
+| FOUND-02 | Phase 1 | Complete |
+| FOUND-03 | Phase 1 | Complete |
+| AUTH-01 | Phase 1 | Complete |
+| AUTH-02 | Phase 1 | Complete |
+| AUTH-03 | Phase 1 | Complete |
+| AUTH-04 | Phase 1 | Complete |
+| AUTH-05 | Phase 1 | Complete |
+| AUTH-06 | Phase 1 | Complete |
+| AUTH-07 | Phase 1 | Complete |
+| AUTH-08 | Phase 1 | Complete |
 | FIRE-01 | Phase 2 | Pending |
-| FIRE-02 | Phase 1 | Pending |
-| FIRE-03 | Phase 1 | Pending |
-| FIRE-04 | Phase 1 | Pending |
+| FIRE-02 | Phase 1 | Complete |
+| FIRE-03 | Phase 1 | Complete |
+| FIRE-04 | Phase 1 | Complete |
 | FIRE-05 | Phase 2 | Pending |
 | DASH-01 | Phase 4 | Pending |
 | DASH-02 | Phase 4 | Pending |

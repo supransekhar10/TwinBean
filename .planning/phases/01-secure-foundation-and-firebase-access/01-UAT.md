@@ -1,23 +1,19 @@
 ---
-status: partial
+status: complete
 phase: 01-secure-foundation-and-firebase-access
 source:
   - 01-01-SUMMARY.md
   - 01-02-SUMMARY.md
   - 01-03-SUMMARY.md
 started: 2026-10-03T00:14:51+05:30
-updated: 2026-10-03T00:14:51+05:30
+updated: 2026-10-03T00:35:00+05:30
 ---
 
 # Phase 1 UAT
 
 ## Current Test
 
-number: 3
-name: Live Firebase doctor flow
-expected: |
-  The demo user signs in, receives the trusted doctor claim, refreshes the ID token, reaches the protected API, and signs out.
-awaiting: user response
+[testing complete]
 
 ## Tests
 
@@ -33,19 +29,19 @@ source: seven passing backend tests plus two passing frontend request tests
 
 ### 3. Live Firebase doctor flow
 expected: The configured demo user signs in, receives `role: doctor` from the trusted script, refreshes the token, sees protected access succeed, and signs out.
-result: blocked
-blocked_by: third-party
-reason: Requires the user's Firebase demo-account credentials and interactive confirmation.
+result: pass
+reported: "The live Firebase demo-account check passed, including doctor role verification, protected API access and sign-out."
+source: user confirmation on 2026-10-03
 
 ## Summary
 
 total: 3
-passed: 2
+passed: 3
 issues: 0
 pending: 0
 skipped: 0
-blocked: 1
+blocked: 0
 
 ## Gaps
 
-None. The remaining item is an external manual verification, not an implementation gap.
+None.
