@@ -99,10 +99,10 @@ coverage:
 
 ## Files Created/Modified
 
-- `backend/app/patients.py` â€” typed patient detail contract, safe root lookup, independent bounded child reads, and timestamp normalization.
-- `backend/app/patient_routes.py` â€” doctor-only detail route with stable identifier validation and 404 translation.
-- `backend/tests/test_patients.py` â€” repository contracts for stream separation, bounds, safe absence, empty values, and ordering.
-- `backend/tests/test_patient_routes.py` â€” detail authorization, serialization shape, identifier validation, and 404 contracts.
+- `backend/app/patients.py` ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â typed patient detail contract, safe root lookup, independent bounded child reads, and timestamp normalization.
+- `backend/app/patient_routes.py` ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â doctor-only detail route with stable identifier validation and 404 translation.
+- `backend/tests/test_patients.py` ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â repository contracts for stream separation, bounds, safe absence, empty values, and ordering.
+- `backend/tests/test_patient_routes.py` ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â detail authorization, serialization shape, identifier validation, and 404 contracts.
 
 ## Decisions Made
 
@@ -136,4 +136,3 @@ Phase 04 can document and manually verify the backend-only Firestore seed/read w
 
 - Confirmed all four plan-owned source/test files and this summary exist.
 - Confirmed task commits `5208580`, `3862b88`, `79579d1`, and `5032dc4` exist in git history.
-
