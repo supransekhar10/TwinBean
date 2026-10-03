@@ -82,6 +82,22 @@ def test_iot_observations_are_independent_typed_home_measurements() -> None:
     assert not hasattr(EhrEvent, "measurement_type")
 
 
+def test_ehr_and_iot_streams_share_patients_and_an_aligned_utc_window() -> None:
+    cohort = generate_cohort(31, "2026.1", TIME_BASIS, patient_count=5)
+    patient_ids = {patient.patient_id for patient in cohort.patients}
+    ehr_patient_ids = {event.patient_id for event in cohort.ehr_events}
+    iot_patient_ids = {observation.patient_id for observation in cohort.iot_observations}
+    ehr_times = [event.event_time for event in cohort.ehr_events]
+    iot_times = [observation.observed_at for observation in cohort.iot_observations]
+
+    assert ehr_patient_ids == patient_ids
+    assert iot_patient_ids == patient_ids
+    assert all(TIME_BASIS - timedelta(days=210) <= value <= TIME_BASIS for value in ehr_times)
+    assert all(TIME_BASIS - timedelta(days=210) <= value <= TIME_BASIS for value in iot_times)
+    assert max(min(ehr_times), min(iot_times)) <= min(max(ehr_times), max(iot_times))
+    assert all(value.tzinfo is UTC for value in (*ehr_times, *iot_times))
+
+
 def test_generated_ids_are_unique_and_input_contract_is_bounded() -> None:
     cohort = generate_cohort(29, "2026.1", TIME_BASIS, patient_count=6)
     identifiers = [
