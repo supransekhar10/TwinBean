@@ -1,18 +1,18 @@
 ---
 gsd_state_version: "1.0"
-current_phase: 2
+current_phase: 02
 current_phase_name: Synthetic Kidney Data and Firestore
 status: executing
-stopped_at: Phase 2 plan revision attempt 2 resumed
-last_updated: "2026-10-03T07:49:57.018Z"
+stopped_at: Completed 02-01-PLAN.md
+last_updated: "2026-10-03T08:01:30.573Z"
 last_activity: 2026-10-03
-last_activity_desc: Phase 1 verified and complete; transitioned to Phase 2
-state_head: aa4e52099abb9df10fde52711e612be3abcb576c
+last_activity_desc: Phase 02 execution started
+state_head: e11ec1d582831950d37dea851c6942b39b284914
 progress:
   total_phases: 6
   completed_phases: 1
   total_plans: 7
-  completed_plans: 3
+  completed_plans: 4
   percent: 17
 ---
 
@@ -23,14 +23,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-10-03)
 
 **Core value:** Doctors can review trustworthy current kidney evidence and future 24-hour AKI risk without confusing unavailable risk with zero risk.
-**Current focus:** Phase 2 -- Synthetic Kidney Data and Firestore
+**Current focus:** Phase 02 — Synthetic Kidney Data and Firestore
 
 ## Current Position
 
-Phase: 2 (Synthetic Kidney Data and Firestore) — READY TO EXECUTE
-Plan: Not started
+Phase: 02 (Synthetic Kidney Data and Firestore) — EXECUTING
+Plan: 2 of 4
 Status: Ready to execute
-Last activity: 2026-10-03 -- Phase 1 verified and complete
+Last activity: 2026-10-03 — Phase 02 execution started
 
 Progress: [██░░░░░░░░] 17%
 
@@ -45,6 +45,11 @@ Progress: [██░░░░░░░░] 17%
 | Phase | Plans | Status |
 |-------|-------|--------|
 | 1. Secure Foundation and Firebase Access | 3/3 | Complete |
+**Per-Plan Metrics:**
+
+| Plan | Duration | Tasks | Files |
+|------|----------|-------|-------|
+| Phase 02 P01 | 28min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -54,6 +59,9 @@ Progress: [██░░░░░░░░] 17%
 - Backend authorization requires exact `role: doctor`; browser state never authorizes access.
 - Research reuses existing evidence and targets only unresolved phase-specific questions.
 - Evaluation requires patient-level splits, future-data leakage prevention, and EHR-only versus combined-stream comparison.
+- [Phase 02]: Patient lists return typed root summaries only; longitudinal EHR and IoT data remain outside the list response.
+- [Phase 02]: Patient routes reuse require_doctor so denied requests do not invoke the repository.
+- [Phase 02]: Firestore stays lazily imported through the existing Admin app factory for offline compatibility.
 
 ### Pending Todos
 
@@ -71,6 +79,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-10-03T07:25:44.674Z
-Stopped at: Phase 2 plan revision attempt 2 resumed
-Resume file: .planning/phases/02-synthetic-kidney-data-and-firestore/02-CONTEXT.md
+Last session: 2026-10-03T08:01:30.228Z
+Stopped at: Completed 02-01-PLAN.md
+Resume file: None

@@ -60,6 +60,10 @@ Plans:
   4. Only authenticated users carrying the doctor role can read patient data through the backend.
 
 **Plans:** TBD
+- [x] 02-01-PLAN.md
+- [ ] 02-02-PLAN.md
+- [ ] 02-03-PLAN.md
+- [ ] 02-04-PLAN.md
 
 ### Phase 3: Clinical Rules and AKI Prediction
 
@@ -126,7 +130,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Secure Foundation and Firebase Access | 3/3 | Complete | 2026-10-03 |
-| 2. Synthetic Kidney Data and Firestore | 0/TBD | Not started | - |
+| 2. Synthetic Kidney Data and Firestore | 1/4 | In Progress|  |
 | 3. Clinical Rules and AKI Prediction | 0/TBD | Not started | - |
 | 4. Risk-Ranked Doctor Dashboard | 0/TBD | Not started | - |
 | 5. Patient Digital Twin Detail | 0/TBD | Not started | - |

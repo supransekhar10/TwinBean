@@ -24,11 +24,11 @@
 
 ### Firebase Setup and Security
 
-- [ ] **FIRE-01**: Backend accesses Cloud Firestore through the Firebase Admin SDK.
+- [x] **FIRE-01**: Backend accesses Cloud Firestore through the Firebase Admin SDK.
 - [x] **FIRE-02**: Service-account credentials remain backend-only, are excluded from Git, and are never exposed to the browser.
 - [x] **FIRE-03**: Setup documentation explains Firebase project configuration, email/password enablement, environment variables, and local startup.
 - [x] **FIRE-04**: Setup documentation explains how to approve a demo doctor account and refresh its ID token after assigning the claim.
-- [ ] **FIRE-05**: Patient data access is limited to authenticated users authorized as doctors.
+- [x] **FIRE-05**: Patient data access is limited to authenticated users authorized as doctors.
 
 ### Doctor Dashboard
 
@@ -106,11 +106,11 @@
 | AUTH-06 | Phase 1 | Complete |
 | AUTH-07 | Phase 1 | Complete |
 | AUTH-08 | Phase 1 | Complete |
-| FIRE-01 | Phase 2 | Pending |
+| FIRE-01 | Phase 2 | Complete |
 | FIRE-02 | Phase 1 | Complete |
 | FIRE-03 | Phase 1 | Complete |
 | FIRE-04 | Phase 1 | Complete |
-| FIRE-05 | Phase 2 | Pending |
+| FIRE-05 | Phase 2 | Complete |
 | DASH-01 | Phase 4 | Pending |
 | DASH-02 | Phase 4 | Pending |
 | DASH-03 | Phase 4 | Pending |
