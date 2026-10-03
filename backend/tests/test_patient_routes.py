@@ -129,3 +129,91 @@ def test_repository_lists_only_bounded_ordered_root_summaries() -> None:
             "ckd_stage": "G3b",
         }
     ]
+
+
+def test_missing_token_is_unauthorized_without_repository_access(
+    fake_repository: FakeRepository,
+) -> None:
+    response = client.get("/patients")
+
+    assert response.status_code == 401
+    assert fake_repository.limits == []
+
+
+def test_invalid_token_is_unauthorized_without_repository_access(
+    monkeypatch: pytest.MonkeyPatch,
+    fake_repository: FakeRepository,
+) -> None:
+    def reject(_token: str) -> dict[str, str]:
+        raise ValueError("invalid")
+
+    monkeypatch.setattr(auth_module, "verify_firebase_token", reject)
+
+    response = client.get(
+        "/patients",
+        headers={"Authorization": "Bearer invalid-token"},
+    )
+
+    assert response.status_code == 401
+    assert fake_repository.limits == []
+
+
+def test_non_doctor_is_forbidden_without_repository_access(
+    monkeypatch: pytest.MonkeyPatch,
+    fake_repository: FakeRepository,
+) -> None:
+    monkeypatch.setattr(
+        auth_module,
+        "verify_firebase_token",
+        lambda _token: {"uid": "research-user", "role": "researcher"},
+    )
+
+    response = client.get(
+        "/patients",
+        headers={"Authorization": "Bearer valid-token"},
+    )
+
+    assert response.status_code == 403
+    assert fake_repository.limits == []
+
+
+@pytest.mark.parametrize("limit", [0, 101])
+def test_out_of_bounds_limit_is_rejected(
+    monkeypatch: pytest.MonkeyPatch,
+    fake_repository: FakeRepository,
+    limit: int,
+) -> None:
+    monkeypatch.setattr(
+        auth_module,
+        "verify_firebase_token",
+        lambda _token: {"uid": "demo-doctor", "role": "doctor"},
+    )
+
+    response = client.get(
+        f"/patients?limit={limit}",
+        headers={"Authorization": "Bearer valid-token"},
+    )
+
+    assert response.status_code == 422
+    assert fake_repository.limits == []
+
+
+def test_doctor_receives_an_honest_empty_patient_list(
+    monkeypatch: pytest.MonkeyPatch,
+    fake_repository: FakeRepository,
+) -> None:
+    fake_repository.summaries = []
+    monkeypatch.setattr(
+        auth_module,
+        "verify_firebase_token",
+        lambda _token: {"uid": "demo-doctor", "role": "doctor"},
+    )
+
+    response = client.get(
+        "/patients",
+        headers={"Authorization": "Bearer valid-token"},
+    )
+
+    assert response.status_code == 200
+    assert response.json() == []
+    assert fake_repository.limits == [100]
