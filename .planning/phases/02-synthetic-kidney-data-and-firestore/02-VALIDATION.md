@@ -1,9 +1,9 @@
 ---
 phase: "2"
 slug: "synthetic-kidney-data-and-firestore"
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: validated
+nyquist_compliant: true
+wave_0_complete: true
 created: "2026-10-03"
 ---
 
@@ -30,33 +30,51 @@ created: "2026-10-03"
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| 02-01-01 | 01 | 1 | FIRE-01, FIRE-05 | T-2-01, T-2-02 | Lazy Admin-client boundary; exact-doctor list tracer; bounded root summaries | route/repository unit | `backend\.venv\Scripts\python.exe -m pytest backend/tests/test_patient_routes.py backend/tests/test_auth.py backend/tests/test_health.py -q` | No - planned W0 | pending/unimplemented |
-| 02-01-02 | 01 | 1 | FIRE-05 | T-2-01 | 401/403/200 semantics, denial before repository access, and bounded limits | route unit + regression | `backend\.venv\Scripts\python.exe -m pytest backend/tests -q` | No - planned W0 | pending/unimplemented |
-| 02-02-01 | 02 | 2 | DATA-01, DATA-02 | T-2-04 | Deterministic adult CKD generation, synthetic provenance, and distinct IoT types | pure unit | `backend\.venv\Scripts\python.exe -m pytest backend/tests/test_synthetic_data.py -q` | No - planned W0 | pending/unimplemented |
-| 02-02-02 | 02 | 2 | FIRE-01, DATA-02, DATA-03 | T-2-03, T-2-05 | Deterministic owned `set()` paths, same-input idempotency, no delete/reset, and size bounds | repository unit + regression | `backend\.venv\Scripts\python.exe -m pytest backend/tests/test_synthetic_data.py backend/tests/test_patients.py backend/tests -q` | No - planned W0 | pending/unimplemented |
-| 02-03-01 | 03 | 3 | FIRE-05, DATA-02, DATA-03 | T-2-06, T-2-07, T-2-08 | Exact-doctor detail route with independent bounded EHR and IoT queries | route/repository unit | `backend\.venv\Scripts\python.exe -m pytest backend/tests/test_patients.py backend/tests/test_patient_routes.py -q` | No - planned W0 | pending/unimplemented |
-| 02-03-02 | 03 | 3 | FIRE-05, DATA-02, DATA-03 | T-2-06, T-2-07, T-2-08 | Safe 404, empty-stream, independent ordering, and full regression behavior | route/repository unit + regression | `backend\.venv\Scripts\python.exe -m pytest backend/tests -q` | No - planned W0 | pending/unimplemented |
-| 02-04-01 | 04 | 4 | FIRE-01, FIRE-05, DATA-03 | T-2-09, T-2-10, T-2-11 | Firestore operations guide documents exact backend-only seeding, owned-path idempotency, credential boundaries, and protected reads | documentation/source contract | `powershell -NoProfile -Command "$p='docs/FIREBASE_SETUP.md'; $s=Get-Content -LiteralPath $p -Raw; $need=@('Cloud Firestore','.\.venv\Scripts\python.exe -m scripts.seed_synthetic_data --seed 2402 --generator-version phase2-v1 --time-basis 2026-01-01T00:00:00+00:00 --patient-count 12','TwinBean-owned','GOOGLE_APPLICATION_CREDENTIALS','NEXT_PUBLIC_','GET /patients','ehr_history','iot_observations','role: doctor','cygrpc','pending'); foreach($n in $need){if(-not $s.Contains($n)){throw "Missing documentation contract: $n"}}; $seed=Get-Content -LiteralPath 'backend/scripts/seed_synthetic_data.py' -Raw; foreach($arg in @('--seed','--generator-version','--time-basis','--patient-count')){if(-not $seed.Contains($arg)){throw "Seed CLI missing: $arg"}}"` | Yes | pending/unimplemented |
+| 02-01-01 | 01 | 1 | FIRE-01, FIRE-05 | T-2-01, T-2-02 | Lazy Admin-client boundary; exact-doctor list tracer; bounded root summaries | route/repository unit | `backend\.venv\Scripts\python.exe -m pytest backend/tests/test_patient_routes.py backend/tests/test_auth.py backend/tests/test_health.py -q` | Yes | green |
+| 02-01-02 | 01 | 1 | FIRE-05 | T-2-01 | 401/403/200 semantics, denial before repository access, and bounded limits | route unit + regression | `backend\.venv\Scripts\python.exe -m pytest backend/tests -q` | Yes | green |
+| 02-02-01 | 02 | 2 | DATA-01, DATA-02 | T-2-04 | Deterministic adult CKD generation, synthetic provenance, and distinct IoT types | pure unit | `backend\.venv\Scripts\python.exe -m pytest backend/tests/test_synthetic_data.py -q` | Yes | green |
+| 02-02-02 | 02 | 2 | FIRE-01, DATA-02, DATA-03 | T-2-03, T-2-05 | Deterministic owned `set()` paths, same-input idempotency, no delete/reset, and size bounds | repository unit + regression | `backend\.venv\Scripts\python.exe -m pytest backend/tests/test_synthetic_data.py backend/tests/test_patients.py backend/tests -q` | Yes | green |
+| 02-03-01 | 03 | 3 | FIRE-05, DATA-02, DATA-03 | T-2-06, T-2-07, T-2-08 | Exact-doctor detail route with independent bounded EHR and IoT queries | route/repository unit | `backend\.venv\Scripts\python.exe -m pytest backend/tests/test_patients.py backend/tests/test_patient_routes.py -q` | Yes | green |
+| 02-03-02 | 03 | 3 | FIRE-05, DATA-02, DATA-03 | T-2-06, T-2-07, T-2-08 | Safe 404, empty-stream, independent ordering, and full regression behavior | route/repository unit + regression | `backend\.venv\Scripts\python.exe -m pytest backend/tests -q` | Yes | green |
+| 02-04-01 | 04 | 4 | FIRE-01, FIRE-05, DATA-03 | T-2-09, T-2-10, T-2-11 | Firestore operations guide documents exact backend-only seeding, owned-path idempotency, credential boundaries, and protected reads | documentation/source contract + approved-runtime evidence | See `02-04-LIVE-EVIDENCE.md` and `docs/FIREBASE_SETUP.md` contract check | Yes | green |
 
 ## Wave 0 Requirements
 
-- [ ] `backend/tests/test_synthetic_data.py` - deterministic adult CKD and separate IoT generation tests.
-- [ ] `backend/tests/test_patients.py` - fake-client repository and idempotent seed-manifest tests.
-- [ ] `backend/tests/test_patient_routes.py` - 401/403/200 route tests with an injected fake repository.
+- [x] `backend/tests/test_synthetic_data.py` - deterministic adult CKD and separate IoT generation tests.
+- [x] `backend/tests/test_patients.py` - fake-client repository and idempotent seed-manifest tests.
+- [x] `backend/tests/test_patient_routes.py` - 401/403/200 route tests with an injected fake repository.
 
-## Manual-Only Verifications
+## Approved-Runtime Verification
 
-| Behavior | Requirement | Why Manual | Test Instructions |
-|----------|-------------|------------|-------------------|
-| Live Firestore seed and doctor read | FIRE-01, FIRE-05, DATA-03 | Local Application Control currently blocks the `cygrpc` extension; no emulator CLI is installed | In an approved runtime, run the seed command twice, confirm unchanged deterministic document paths, then call list/detail with a refreshed doctor token. |
+| Behavior | Requirement | Evidence | Status |
+|----------|-------------|----------|--------|
+| Live Firestore seed and doctor read | FIRE-01, FIRE-05, DATA-03 | Sanitized repeat-seed, readback, unrelated-canary, and protected-route results in `02-04-LIVE-EVIDENCE.md` | Passed |
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies.
-- [ ] Sampling continuity: no three consecutive tasks without automated verification.
-- [ ] Wave 0 covers all missing references.
-- [ ] No watch-mode flags.
-- [ ] Feedback latency is under 30 seconds.
-- [ ] `nyquist_compliant: true` is set after implementation evidence exists.
+- [x] All tasks have automated verification or approved-runtime evidence.
+- [x] Sampling continuity: no three consecutive tasks without automated verification.
+- [x] Wave 0 covers all missing references.
+- [x] No watch-mode flags.
+- [x] Feedback latency is under 30 seconds.
+- [x] `nyquist_compliant: true` is set from observed evidence.
 
-**Approval:** pending
+**Approval:** validated
+
+## Validation Audit 2026-10-03
+
+| Metric | Count |
+|--------|-------|
+| Requirements audited | 5 |
+| Covered | 5 |
+| Partial | 0 |
+| Missing | 0 |
+| New gaps found | 0 |
+| Escalated | 0 |
+
+FIRE-01, FIRE-05, DATA-01, DATA-02, and DATA-03 are **COVERED**.
+
+- `backend\.venv\Scripts\python.exe -m pytest backend/tests -q` - 40 passed.
+- Plan 02-04 PowerShell documentation/source contract command - passed.
+- `02-04-LIVE-EVIDENCE.md` records sanitized approved-runtime import, repeat-seed, unrelated-canary, and exact-doctor read evidence.
+- No test files were added because no behavioral coverage gap remained.
