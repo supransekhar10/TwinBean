@@ -35,13 +35,17 @@ Run this command explicitly from `backend` after Cloud Firestore is enabled and 
 
 This is a privileged, backend-only operation. It is never run during FastAPI startup, from the browser, or by browser code. The command uses the existing backend Firebase Admin application and Application Default Credentials.
 
-For identical seed, generator version, UTC time basis, and patient count, the generated manifest checksum and deterministic `set()` targets must be the same. The only permitted targets are TwinBean-owned paths:
+For identical seed, generator version, UTC time basis, and patient count, the generated cohort ID and manifest checksum are immutable and deterministic. A seed first stages records only under one TwinBean-owned version, reads that version back, validates its counts, links, UTC timestamps, exact provenance, and checksum, then atomically changes this one metadata pointer:
 
-- `patients/{patient_id}`
-- `patients/{patient_id}/ehr_events/{event_id}`
-- `patients/{patient_id}/iot_observations/{event_id}`
+- `twinbean_cohorts/{cohort_id}` (validated cohort descriptor)
+- `twinbean_cohorts/{cohort_id}/patients/{patient_id}`
+- `twinbean_cohorts/{cohort_id}/patients/{patient_id}/ehr_events/{event_id}`
+- `twinbean_cohorts/{cohort_id}/patients/{patient_id}/iot_observations/{observation_id}`
+- `twinbean_metadata/active_cohort` (the only active-cohort pointer)
 
-Reruns may update those deterministic owned documents. They must not delete or reset a collection, write to non-owned paths, or mutate unrelated Firestore documents. Before live verification, create an unrelated canary outside `patients` and compare its non-secret payload hash before and after two identical seed runs.
+The seed never writes a global `patients` collection, deletes or resets a collection, or mutates unrelated Firestore documents. It preserves prior versions; failed staging, readback validation, or pointer activation leaves the prior active version unchanged. Before live verification, create an unrelated canary outside `twinbean_cohorts` and `twinbean_metadata` and compare its non-secret payload hash before and after two identical seed runs.
+
+Each generated patient produces one root, 26 EHR events, and 24 IoT observations: 51 staged documents per patient. At the supported maximum of 100 patients, a run stages 5,100 clinical documents plus one cohort descriptor, then performs one active-pointer transaction: **5,102 writes total**, split into Firestore batches of at most 100 staged writes.
 
 ## Doctor-only patient read verification
 
@@ -66,9 +70,7 @@ No bearer token, password, service-account JSON, private key, or credential path
 
 ## Current live-verification status
 
-Live Firestore import, persistence, and doctor-authorized patient reads are **pending** approved-runtime verification. This Windows host currently cannot import Admin Firestore because Windows Application Control blocks the `cygrpc` extension. Do not disable Application Control, substitute another SDK, or claim that the seed or protected reads succeeded here.
-
-Move to an organization-approved runtime where the existing Firebase Admin Firestore dependency imports successfully before running the deterministic seed twice or recording live evidence.
+The approved-runtime evidence recorded for the earlier Phase 2 persistence contract is complete. The versioned-cohort publication contract above supersedes those global-path checks, so a **post-fix approved-runtime rerun is pending**. Use the existing Firebase Admin SDK in an organization-approved runtime; do not disable Application Control or substitute another SDK. Record only sanitized timestamps, checksums, counts, representative versioned paths, and authorization results.
 
 ## Expected authorization behavior
 

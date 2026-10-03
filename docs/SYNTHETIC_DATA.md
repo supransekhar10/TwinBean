@@ -13,13 +13,17 @@ cd backend
 .\.venv\Scripts\python.exe -m scripts.seed_synthetic_data --seed 2402 --generator-version phase2-v1 --time-basis 2026-01-01T00:00:00+00:00 --patient-count 12
 ```
 
-The command validates the complete manifest before opening a Firestore batch. It writes deterministic IDs with `set()` only to these owned paths:
+The command validates the complete manifest before opening a Firestore batch. It derives an immutable `cohort_id`, stages only these owned versioned paths, reads them back, validates every document and the manifest checksum, then atomically publishes exactly one active pointer:
 
-- `patients/{patient_id}`
-- `patients/{patient_id}/ehr_events/{event_id}`
-- `patients/{patient_id}/iot_observations/{observation_id}`
+- `twinbean_cohorts/{cohort_id}`
+- `twinbean_cohorts/{cohort_id}/patients/{patient_id}`
+- `twinbean_cohorts/{cohort_id}/patients/{patient_id}/ehr_events/{event_id}`
+- `twinbean_cohorts/{cohort_id}/patients/{patient_id}/iot_observations/{observation_id}`
+- `twinbean_metadata/active_cohort`
 
-It performs no collection-wide delete or reset. Service-account credentials remain backend-only and are not generator inputs.
+Every root and child stores exact `synthetic: true`, source, generator version, seed, cohort ID, and UTC timestamp provenance. EHR records must use `twinbean-synthetic-ehr`; IoT observations must use `twinbean-simulated-iot`. A malformed or mismatched record makes the staged/active cohort unavailable rather than being coerced into synthetic data.
+
+The generator emits 51 clinical documents per patient (one root, 26 EHR events, and 24 IoT observations). At 100 patients, seeding stages 5,100 clinical documents plus the cohort descriptor and makes one active-pointer transaction: 5,102 total writes, with staged batches bounded at 100 writes. It performs no collection-wide delete or reset and keeps old cohort versions intact. Service-account credentials remain backend-only and are not generator inputs.
 
 ## Streams and alignment
 
