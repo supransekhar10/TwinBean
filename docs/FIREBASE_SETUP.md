@@ -1,11 +1,11 @@
-# Firebase setup
+# Firebase and Cloud Firestore setup
 
 ## Create and configure the project
 
 1. Create a Firebase project and a Web app in the Firebase console.
 2. In Authentication, enable the Email/Password provider.
 3. Create the demo doctor under Authentication > Users. Do not add role controls to the client.
-4. Create a Cloud Firestore database for later milestones. No patient collections are required for this foundation milestone.
+4. In the same Firebase project, open **Build > Firestore Database** and create or enable the Cloud Firestore database. TwinBean uses Cloud Firestore as its only persistence authority: do not add SQLite, a browser datastore, or a browser-to-Firestore access path.
 5. Copy the Web app configuration into `frontend/.env.local` using `frontend/.env.example` as the key list.
 6. Set `NEXT_PUBLIC_API_BASE_URL=http://localhost:8000`.
 
@@ -14,7 +14,7 @@ Firebase Web configuration is public application configuration. The Admin SDK se
 ## Backend credentials
 
 1. In Firebase project settings, create a service-account key for local development.
-2. Store the downloaded JSON outside this repository.
+2. Store the downloaded JSON outside this repository and outside Git.
 3. Set these values in `backend/.env`:
 
    ```dotenv
@@ -23,46 +23,58 @@ Firebase Web configuration is public application configuration. The Admin SDK se
    CORS_ORIGINS=http://localhost:3000
    ```
 
-The repository ignores local environment files and common Firebase service-account filenames. Never prefix Admin SDK values with `NEXT_PUBLIC_`.
+The repository ignores local environment files and common Firebase service-account filenames. Never prefix Admin SDK values with `NEXT_PUBLIC_`, put service-account material in browser configuration, or record a credential path in operational evidence.
 
-## Manual demo-account verification
+## Seed the deterministic synthetic cohort
 
-1. Start the backend from `backend`:
+Run this command explicitly from `backend` after Cloud Firestore is enabled and Application Default Credentials are available to the backend process:
+
+```powershell
+.\.venv\Scripts\python.exe -m scripts.seed_synthetic_data --seed 2402 --generator-version phase2-v1 --time-basis 2026-01-01T00:00:00+00:00 --patient-count 12
+```
+
+This is a privileged, backend-only operation. It is never run during FastAPI startup, from the browser, or by browser code. The command uses the existing backend Firebase Admin application and Application Default Credentials.
+
+For identical seed, generator version, UTC time basis, and patient count, the generated manifest checksum and deterministic `set()` targets must be the same. The only permitted targets are TwinBean-owned paths:
+
+- `patients/{patient_id}`
+- `patients/{patient_id}/ehr_events/{event_id}`
+- `patients/{patient_id}/iot_observations/{event_id}`
+
+Reruns may update those deterministic owned documents. They must not delete or reset a collection, write to non-owned paths, or mutate unrelated Firestore documents. Before live verification, create an unrelated canary outside `patients` and compare its non-secret payload hash before and after two identical seed runs.
+
+## Doctor-only patient read verification
+
+1. Start FastAPI from `backend`:
 
    ```powershell
    .\.venv\Scripts\python.exe -m uvicorn app.main:app --reload
    ```
 
-2. Start the frontend from `frontend` in a second terminal:
+2. In a trusted backend terminal, assign the demo account its custom claim. Only an operator with backend service-account access can do this:
 
    ```powershell
-   npm.cmd run dev
-   ```
-
-3. Open `http://localhost:3000`, enter the demo user's Firebase email and password, and select **Sign in**. The page must show the signed-in email. If the claim has not been assigned yet, **Check protected API** must report that the account is not approved as a doctor.
-
-4. In a trusted backend terminal, assign the custom claim using the same demo email:
-
-   ```powershell
-   cd backend
    .\.venv\Scripts\python.exe -m scripts.set_doctor_role --email doctor@example.com
    ```
 
-   The command must print that the doctor role was assigned. Only an operator with service-account access can run it. The script preserves unrelated custom claims and sets `role` to `doctor`; the browser has no role-management route.
+3. Refresh the Firebase ID token after claim assignment (use `getIdToken(true)` in the signed-in client, or sign out and sign back in). The refreshed token must carry the exact `role: doctor` custom claim.
+4. Send that bearer token only to FastAPI, never directly to Firestore. Call `GET /patients` and expect HTTP `200` with a bounded synthetic root list.
+5. Choose one returned `tbp-...` ID and call `GET /patients/{patient_id}` with the same refreshed token. Expect HTTP `200` and separately named `ehr_history` and `iot_observations` response fields; do not treat the two source streams as one data source.
+6. Verify that a Firebase-verified token without exactly `role: doctor` receives `403`. Do not use frontend state as authorization.
 
-5. Return to the signed-in browser and select **Refresh role token**. This calls Firebase `getIdToken(true)` and immediately checks the protected endpoint. Alternatively, sign out and sign back in to obtain a newly issued token.
+No bearer token, password, service-account JSON, private key, or credential path may be pasted into commands, logs, screenshots, or the live-evidence file. Record only sanitized timestamps, checksums, counts, representative owned paths, HTTP statuses, response-shape notes, and operator approval.
 
-6. Confirm the page shows **Protected API available** and **Doctor verified**. This proves `/health/authenticated` returned `200` after the backend verified the Firebase ID token and exact `role: doctor` claim.
+## Current live-verification status
 
-7. Select **Sign out**. Confirm the email and protected controls disappear and the doctor sign-in form returns.
+Live Firestore import, persistence, and doctor-authorized patient reads are **pending** approved-runtime verification. This Windows host currently cannot import Admin Firestore because Windows Application Control blocks the `cygrpc` extension. Do not disable Application Control, substitute another SDK, or claim that the seed or protected reads succeeded here.
 
-Record the date, demo email, and results in the Phase 1 verification file. Never record the password, ID token, or service-account contents.
+Move to an organization-approved runtime where the existing Firebase Admin Firestore dependency imports successfully before running the deterministic seed twice or recording live evidence.
 
 ## Expected authorization behavior
 
 - No bearer token: `401`
 - Invalid, expired, or revoked Firebase ID token: `401`
 - Verified token without exactly `role: doctor`: `403`
-- Verified token with `role: doctor`: `200` from `/health/authenticated`
+- Verified token with exact `role: doctor`: `200` from `GET /patients` and `GET /patients/{patient_id}` when the requested synthetic patient exists
 
-The backend performs these checks. Frontend state is never treated as authorization.
+FastAPI performs these checks. Browser state is never treated as authorization, and browser code never queries Firestore directly.
