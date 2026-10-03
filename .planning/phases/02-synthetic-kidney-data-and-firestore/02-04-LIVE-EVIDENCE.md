@@ -1,8 +1,8 @@
 # Phase 02 approved-runtime live evidence
 
-**Status:** Passed in an organization-approved runtime  
-**Verification time (UTC):** 2026-10-03T09:31:13.1890311Z  
-**Target Firebase project:** `twinbean-a7011`  
+**Status:** Passed in an organization-approved runtime
+**Verification time (UTC):** 2026-10-03T09:31:13.1890311Z
+**Target Firebase project:** `twinbean-a7011`
 **Operator approval:** `approved-runtime verification passed`
 
 ## Sanitization boundary
