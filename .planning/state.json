@@ -11,7 +11,7 @@
     {
       "number": "2",
       "name": "Synthetic Kidney Data and Firestore",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "number": "3",
@@ -39,5 +39,5 @@
     "label": "Advance to the next step",
     "reason": "Phase 02 of 6 · 17% · executing"
   },
-  "updated_at": "2026-10-03T08:01:19.606Z"
+  "updated_at": "2026-10-03T08:28:57.911Z"
 }
