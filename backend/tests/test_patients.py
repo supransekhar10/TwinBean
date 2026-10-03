@@ -227,3 +227,107 @@ def test_repository_reads_distinct_bounded_ehr_and_iot_histories_without_snapsho
     assert serialized["ehr_history"][0]["source"] == "twinbean-synthetic-ehr"
     assert serialized["iot_observations"][0]["source"] == "twinbean-simulated-iot"
     assert not any(isinstance(item, DetailSnapshot) for item in (*detail.ehr_history, *detail.iot_observations))
+
+
+
+def _ehr_snapshot(event_id: str, event_time: str) -> DetailSnapshot:
+    return DetailSnapshot(
+        {
+            "event_id": event_id,
+            "patient_id": DETAIL_PATIENT_ID,
+            "event_type": "laboratory",
+            "event_time": event_time,
+            "data": {"test_name": "egfr"},
+            "synthetic": True,
+            "generator_version": "2026.1",
+            "seed": 7,
+            "source": "twinbean-synthetic-ehr",
+        }
+    )
+
+
+def _iot_snapshot(observation_id: str, observed_at: str) -> DetailSnapshot:
+    return DetailSnapshot(
+        {
+            "observation_id": observation_id,
+            "patient_id": DETAIL_PATIENT_ID,
+            "measurement_type": "weight_kg",
+            "observed_at": observed_at,
+            "data": {"value": 72.4, "unit": "kg"},
+            "synthetic": True,
+            "generator_version": "2026.1",
+            "seed": 7,
+            "source": "twinbean-simulated-iot",
+        }
+    )
+
+
+def test_missing_patient_root_skips_all_child_stream_queries() -> None:
+    document = DetailDocument(
+        DetailSnapshot(None),
+        {"ehr_events": DetailCollection([]), "iot_observations": DetailCollection([])},
+    )
+    client = DetailClient(document)
+
+    detail = PatientRepository(client).get_patient(DETAIL_PATIENT_ID)
+
+    assert detail is None
+    assert client.document_paths == [f"patients/{DETAIL_PATIENT_ID}"]
+    assert document.get_calls == 1
+    assert document.collection_names == []
+
+
+def test_empty_ehr_stream_is_preserved_without_replacing_iot_observations() -> None:
+    document = DetailDocument(
+        DetailSnapshot(
+            {
+                "patient_id": DETAIL_PATIENT_ID,
+                "display_name": "Synthetic CKD Patient",
+                "age": 64,
+                "ckd_stage": "G3b",
+            }
+        ),
+        {
+            "ehr_events": DetailCollection([]),
+            "iot_observations": DetailCollection([_iot_snapshot("iot-newest", "2026-01-03T00:00:00Z")]),
+        },
+    )
+
+    detail = PatientRepository(DetailClient(document)).get_patient(DETAIL_PATIENT_ID)
+
+    assert detail is not None
+    assert detail.ehr_history == []
+    assert [item.observation_id for item in detail.iot_observations] == ["iot-newest"]
+
+
+def test_repository_normalizes_each_stream_to_ascending_utc_timestamp_order() -> None:
+    document = DetailDocument(
+        DetailSnapshot(
+            {
+                "patient_id": DETAIL_PATIENT_ID,
+                "display_name": "Synthetic CKD Patient",
+                "age": 64,
+                "ckd_stage": "G3b",
+            }
+        ),
+        {
+            "ehr_events": DetailCollection(
+                [
+                    _ehr_snapshot("ehr-later", "2026-01-03T00:00:00Z"),
+                    _ehr_snapshot("ehr-earlier", "2026-01-01T00:00:00Z"),
+                ]
+            ),
+            "iot_observations": DetailCollection(
+                [
+                    _iot_snapshot("iot-later", "2026-01-04T00:00:00Z"),
+                    _iot_snapshot("iot-earlier", "2026-01-02T00:00:00Z"),
+                ]
+            ),
+        },
+    )
+
+    detail = PatientRepository(DetailClient(document)).get_patient(DETAIL_PATIENT_ID)
+
+    assert detail is not None
+    assert [item.event_id for item in detail.ehr_history] == ["ehr-earlier", "ehr-later"]
+    assert [item.observation_id for item in detail.iot_observations] == ["iot-earlier", "iot-later"]

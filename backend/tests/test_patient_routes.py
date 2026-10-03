@@ -178,3 +178,34 @@ def test_invalid_detail_identifier_is_rejected_before_lookup(monkeypatch: pytest
     response = client.get("/patients/not-a-stable-id", headers={"Authorization": "Bearer valid-token"})
     assert response.status_code == 422
     assert detail_repository.patient_ids == []
+
+
+
+class MissingDetailRouteRepository(DetailRouteRepository):
+    def get_patient(self, patient_id: str, event_limit: int = 100) -> None:
+        self.patient_ids.append(patient_id)
+        return None
+
+
+def test_missing_detail_root_returns_404_without_storage_detail(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repository = MissingDetailRouteRepository()
+    app.dependency_overrides[get_patient_repository] = lambda: repository
+    monkeypatch.setattr(
+        auth_module,
+        "verify_firebase_token",
+        lambda _token: {"uid": "demo-doctor", "role": "doctor"},
+    )
+
+    try:
+        response = client.get(
+            f"/patients/{DETAIL_PATIENT_ID}",
+            headers={"Authorization": "Bearer valid-token"},
+        )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 404
+    assert response.json() == {"detail": "Patient not found."}
+    assert repository.patient_ids == [DETAIL_PATIENT_ID]
