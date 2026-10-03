@@ -1,4 +1,5 @@
 import sys
+from datetime import UTC, datetime
 
 import pytest
 from fastapi.testclient import TestClient
@@ -7,6 +8,7 @@ from app import auth as auth_module
 from app.main import app
 from app.patient_routes import get_patient_repository
 from app.patients import PatientRepository
+from app.synthetic_data import generate_cohort
 
 
 client = TestClient(app)
@@ -41,17 +43,23 @@ def test_doctor_can_list_typed_root_patient_summaries(monkeypatch: pytest.Monkey
 
 
 class FakeSnapshot:
-    def __init__(self, data: dict[str, object]) -> None:
+    def __init__(self, data: dict[str, object] | None, identifier: str | None = None) -> None:
         self._data = data
+        self.id = identifier
 
-    def to_dict(self) -> dict[str, object]:
+    def to_dict(self) -> dict[str, object] | None:
         return self._data
 
 
 class FakeCollection:
-    def __init__(self) -> None:
+    def __init__(self, client: "FakeClient", path: str) -> None:
+        self.client = client
+        self.path = path
         self.order_field: str | None = None
         self.limit_value: int | None = None
+
+    def document(self, identifier: str) -> "FakeDocument":
+        return FakeDocument(self.client, f"{self.path}/{identifier}")
 
     def order_by(self, field: str) -> "FakeCollection":
         self.order_field = field
@@ -62,26 +70,61 @@ class FakeCollection:
         return self
 
     def stream(self) -> list[FakeSnapshot]:
-        return [FakeSnapshot({"patient_id": "synthetic-001", "display_name": "Synthetic Patient 001", "age": 64, "ckd_stage": "G3b", "ehr_events": [{"event_id": "must-not-serialize"}], "iot_observations": [{"observation_id": "must-not-serialize"}]})]
+        prefix = f"{self.path}/"
+        depth = self.path.count("/") + 1
+        documents = [(path, data) for path, data in self.client.documents.items() if path.startswith(prefix) and path.count("/") == depth]
+        documents.sort(key=lambda item: str(item[1].get(self.order_field or "")))
+        if self.limit_value is not None:
+            documents = documents[: self.limit_value]
+        return [FakeSnapshot(data, path.rsplit("/", maxsplit=1)[-1]) for path, data in documents]
+
+
+class FakeDocument:
+    def __init__(self, client: "FakeClient", path: str) -> None:
+        self.client = client
+        self.path = path
+
+    def get(self) -> FakeSnapshot:
+        return FakeSnapshot(self.client.documents.get(self.path), self.path.rsplit("/", maxsplit=1)[-1])
+
+    def collection(self, name: str) -> FakeCollection:
+        return FakeCollection(self.client, f"{self.path}/{name}")
+
+
+class FakeBatch:
+    def __init__(self, client: "FakeClient") -> None:
+        self.client = client
+        self.calls: list[tuple[str, dict[str, object]]] = []
+
+    def set(self, document: FakeDocument, payload: dict[str, object]) -> None:
+        self.calls.append((document.path, dict(payload)))
+
+    def commit(self) -> None:
+        self.client.documents.update(self.calls)
 
 
 class FakeClient:
     def __init__(self) -> None:
-        self.collection_name: str | None = None
-        self.collection_ref = FakeCollection()
+        self.documents: dict[str, dict[str, object]] = {}
+        self.collection_paths: list[str] = []
 
-    def collection(self, name: str) -> FakeCollection:
-        self.collection_name = name
-        return self.collection_ref
+    def document(self, path: str) -> FakeDocument:
+        return FakeDocument(self, path)
+
+    def batch(self) -> FakeBatch:
+        return FakeBatch(self)
+
+    def transaction(self) -> FakeBatch:
+        return FakeBatch(self)
 
 
 def test_repository_lists_only_bounded_ordered_root_summaries() -> None:
     client_boundary = FakeClient()
+    cohort = generate_cohort(31, "2026.1", datetime(2026, 1, 15, tzinfo=UTC), patient_count=2)
+    result = PatientRepository(client_boundary).write_cohort(cohort)
     summaries = PatientRepository(client_boundary).list_patients(500)
-    assert client_boundary.collection_name == "patients"
-    assert client_boundary.collection_ref.order_field == "patient_id"
-    assert client_boundary.collection_ref.limit_value == 100
-    assert [summary.model_dump() for summary in summaries] == [{"patient_id": "synthetic-001", "display_name": "Synthetic Patient 001", "age": 64, "ckd_stage": "G3b"}]
+    assert result.cohort_id in next(path for path in client_boundary.documents if path.endswith("/patients/" + cohort.patients[0].patient_id))
+    assert [summary.patient_id for summary in summaries] == sorted(patient.patient_id for patient in cohort.patients)
 
 
 def test_missing_token_is_unauthorized_without_repository_access(fake_repository: FakeRepository) -> None:
