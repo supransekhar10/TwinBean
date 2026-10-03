@@ -2,16 +2,16 @@
 gsd_state_version: "1.0"
 current_phase: 02
 current_phase_name: Synthetic Kidney Data and Firestore
-status: executing
-stopped_at: Completed 02-03-PLAN.md
-last_updated: "2026-10-03T09:16:13.020Z"
+status: verifying
+stopped_at: Completed 02-04-PLAN.md
+last_updated: "2026-10-03T10:17:02.902Z"
 last_activity: 2026-10-03
 last_activity_desc: Phase 02 execution started
 progress:
   total_phases: 6
   completed_phases: 1
   total_plans: 7
-  completed_plans: 6
+  completed_plans: 7
   percent: 17
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-10-03)
 
 Phase: 02 (Synthetic Kidney Data and Firestore) — EXECUTING
 Plan: 4 of 4
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-10-03 — Phase 02 execution started
 
 Progress: [██░░░░░░░░] 17%
@@ -51,6 +51,7 @@ Progress: [██░░░░░░░░] 17%
 | Phase 02 P01 | 28min | 2 tasks | 5 files |
 | Phase 02-synthetic-kidney-data-and-firestore P02 | 26min | 2 tasks | 5 files |
 | Phase 02-synthetic-kidney-data-and-firestore P03 | 7min | 2 tasks | 4 files |
+| Phase 02 P04 | 13min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -66,6 +67,9 @@ Progress: [██░░░░░░░░] 17%
 - [Phase 02-synthetic-kidney-data-and-firestore]: Seed manifests validate all synthetic provenance, stable IDs, parent relationships, and document sizes before opening a Firestore batch.
 - [Phase 02-synthetic-kidney-data-and-firestore]: Seeding uses deterministic document IDs and batch.set only, with no cleanup or generated document-ID branch.
 - [Phase 02-synthetic-kidney-data-and-firestore]: Patient detail uses separately named ehr_history and iot_observations fields with independent bounded UTC ordering.
+- [Phase 02]: Approved-runtime Firestore evidence records only sanitized facts; credentials and bearer tokens remain excluded.
+- [Phase 02]: Repeated seeds are proven through stable checksums, owned path shapes, and an unchanged unrelated canary.
+- [Phase 02]: Patient reads remain FastAPI-only and require an exact role: doctor claim.
 
 ### Pending Todos
 
@@ -83,6 +87,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-10-03T09:16:12.974Z
-Stopped at: Completed 02-03-PLAN.md
+Last session: 2026-10-03T10:17:02.876Z
+Stopped at: Completed 02-04-PLAN.md
 Resume file: None
