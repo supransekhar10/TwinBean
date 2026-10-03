@@ -70,7 +70,7 @@ No bearer token, password, service-account JSON, private key, or credential path
 
 ## Current live-verification status
 
-The approved-runtime evidence recorded for the earlier Phase 2 persistence contract is complete. The versioned-cohort publication contract above supersedes those global-path checks, so a **post-fix approved-runtime rerun is pending**. Use the existing Firebase Admin SDK in an organization-approved runtime; do not disable Application Control or substitute another SDK. Record only sanitized timestamps, checksums, counts, representative versioned paths, and authorization results.
+The versioned-cohort publication contract passed its post-fix approved-runtime rerun. The sanitized results are recorded in `.planning/phases/02-synthetic-kidney-data-and-firestore/02-04-POST-FIX-LIVE-EVIDENCE.md`. The run used the existing Firebase Admin SDK, repeated the deterministic seed, independently read back both streams, preserved the unrelated canary, and verified protected doctor reads.
 
 ## Expected authorization behavior
 

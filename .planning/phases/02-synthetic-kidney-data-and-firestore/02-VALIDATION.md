@@ -48,7 +48,7 @@ created: "2026-10-03"
 
 | Behavior | Requirement | Evidence | Status |
 |----------|-------------|----------|--------|
-| Live Firestore seed and doctor read | FIRE-01, FIRE-05, DATA-03 | Sanitized repeat-seed, readback, unrelated-canary, and protected-route results in `02-04-LIVE-EVIDENCE.md` | Passed |
+| Live Firestore seed and doctor read | FIRE-01, FIRE-05, DATA-03 | Versioned repeat-seed, activation, readback, unrelated-canary, and protected-route results in `02-04-POST-FIX-LIVE-EVIDENCE.md` | Passed |
 
 ## Validation Sign-Off
 
@@ -74,7 +74,7 @@ created: "2026-10-03"
 
 FIRE-01, FIRE-05, DATA-01, DATA-02, and DATA-03 are **COVERED**.
 
-- `backend\.venv\Scripts\python.exe -m pytest backend/tests -q` - 40 passed.
+- `backend\.venv\Scripts\python.exe -m pytest backend/tests -q` - 39 passed.
 - Plan 02-04 PowerShell documentation/source contract command - passed.
-- `02-04-LIVE-EVIDENCE.md` records sanitized approved-runtime import, repeat-seed, unrelated-canary, and exact-doctor read evidence.
-- No test files were added because no behavioral coverage gap remained.
+- `02-04-POST-FIX-LIVE-EVIDENCE.md` records sanitized versioned staging, activation, repeat-seed, unrelated-canary, and exact-doctor read evidence.
+- Failure-path tests cover inactive partial writes, validation mismatch, activation failure, strict provenance, cohort isolation, and child ownership.
