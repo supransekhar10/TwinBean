@@ -99,12 +99,18 @@ class PatientRepository:
             .limit(bounded_limit)
             .stream()
         )
+        ehr_history = sorted(
+            (self._ehr_event_from_snapshot(snapshot) for snapshot in ehr_events),
+            key=lambda event: event.event_time,
+        )
+        iot_history = sorted(
+            (self._iot_observation_from_snapshot(snapshot) for snapshot in iot_observations),
+            key=lambda observation: observation.observed_at,
+        )
         return PatientDetail(
             patient=self._summary_from_data(root_data),
-            ehr_history=[self._ehr_event_from_snapshot(snapshot) for snapshot in ehr_events],
-            iot_observations=[
-                self._iot_observation_from_snapshot(snapshot) for snapshot in iot_observations
-            ],
+            ehr_history=ehr_history,
+            iot_observations=iot_history,
         )
 
     def write_cohort(self, cohort: SyntheticCohort) -> SeedResult:
