@@ -11,6 +11,7 @@ from app.synthetic_data import generate_cohort
 
 
 TIME_BASIS = datetime(2026, 1, 15, 12, 0, tzinfo=UTC)
+DETAIL_PATIENT_ID = "tbp-0123456789abcdef0123456789abcdef"
 
 
 class FakeBatch:
@@ -126,40 +127,15 @@ def test_seed_cli_invokes_generator_and_repository_once_without_sensitive_output
     class FakeRepository:
         def write_cohort(self, received_cohort: object) -> object:
             calls["cohort"] = received_cohort
-            return type(
-                "Result",
-                (),
-                {
-                    "patient_count": 1,
-                    "ehr_event_count": len(cohort.ehr_events),
-                    "iot_observation_count": len(cohort.iot_observations),
-                    "manifest_checksum": hashlib.sha256(b"manifest").hexdigest(),
-                },
-            )()
+            return type("Result", (), {"patient_count": 1, "ehr_event_count": len(cohort.ehr_events), "iot_observation_count": len(cohort.iot_observations), "manifest_checksum": hashlib.sha256(b"manifest").hexdigest()})()
 
     monkeypatch.setattr(seed_synthetic_data, "generate_cohort", lambda **kwargs: calls.setdefault("generator", kwargs) and cohort)
     monkeypatch.setattr(seed_synthetic_data.PatientRepository, "from_firestore", lambda: FakeRepository())
 
-    seed_synthetic_data.main(
-        [
-            "--seed",
-            "5",
-            "--generator-version",
-            "2026.1",
-            "--time-basis",
-            "2026-01-15T12:00:00Z",
-            "--patient-count",
-            "1",
-        ]
-    )
+    seed_synthetic_data.main(["--seed", "5", "--generator-version", "2026.1", "--time-basis", "2026-01-15T12:00:00Z", "--patient-count", "1"])
 
     output = capsys.readouterr().out
-    assert calls["generator"] == {
-        "seed": 5,
-        "generator_version": "2026.1",
-        "time_basis": TIME_BASIS,
-        "patient_count": 1,
-    }
+    assert calls["generator"] == {"seed": 5, "generator_version": "2026.1", "time_basis": TIME_BASIS, "patient_count": 1}
     assert calls["cohort"] is cohort
     assert "seed=5" in output
     assert "version=2026.1" in output
@@ -169,23 +145,85 @@ def test_seed_cli_invokes_generator_and_repository_once_without_sensitive_output
     assert "credential" not in output.lower()
 
 
-@pytest.mark.parametrize(
-    ("arguments", "message"),
-    [
-        (["--seed", "-1"], "seed"),
-        (["--generator-version", ""], "generator-version"),
-        (["--time-basis", "2026-01-15T12:00:00"], "UTC"),
-        (["--patient-count", "0"], "patient-count"),
-    ],
-)
-def test_seed_cli_rejects_invalid_explicit_inputs(
-    arguments: list[str],
-    message: str,
-    capsys: pytest.CaptureFixture[str],
-) -> None:
+@pytest.mark.parametrize(("arguments", "message"), [(["--seed", "-1"], "seed"), (["--generator-version", ""], "generator-version"), (["--time-basis", "2026-01-15T12:00:00"], "UTC"), (["--patient-count", "0"], "patient-count")])
+def test_seed_cli_rejects_invalid_explicit_inputs(arguments: list[str], message: str, capsys: pytest.CaptureFixture[str]) -> None:
     from scripts import seed_synthetic_data
 
     with pytest.raises(SystemExit):
         seed_synthetic_data.main(arguments)
 
     assert message in capsys.readouterr().err
+
+
+class DetailSnapshot:
+    def __init__(self, data: dict[str, object] | None) -> None:
+        self._data = data
+
+    def to_dict(self) -> dict[str, object] | None:
+        return self._data
+
+
+class DetailCollection:
+    def __init__(self, snapshots: list[DetailSnapshot]) -> None:
+        self.snapshots = snapshots
+        self.order_field: str | None = None
+        self.limit_value: int | None = None
+
+    def order_by(self, field: str) -> "DetailCollection":
+        self.order_field = field
+        return self
+
+    def limit(self, value: int) -> "DetailCollection":
+        self.limit_value = value
+        return self
+
+    def stream(self) -> list[DetailSnapshot]:
+        return self.snapshots
+
+
+class DetailDocument:
+    def __init__(self, root: DetailSnapshot, collections: dict[str, DetailCollection]) -> None:
+        self.root = root
+        self.collections = collections
+        self.collection_names: list[str] = []
+        self.get_calls = 0
+
+    def get(self) -> DetailSnapshot:
+        self.get_calls += 1
+        return self.root
+
+    def collection(self, name: str) -> DetailCollection:
+        self.collection_names.append(name)
+        return self.collections[name]
+
+
+class DetailClient:
+    def __init__(self, document: DetailDocument) -> None:
+        self.detail_document = document
+        self.document_paths: list[str] = []
+
+    def document(self, path: str) -> DetailDocument:
+        self.document_paths.append(path)
+        return self.detail_document
+
+
+def test_repository_reads_distinct_bounded_ehr_and_iot_histories_without_snapshots() -> None:
+    ehr = DetailCollection([DetailSnapshot({"event_id": "ehr-0123456789abcdef0123456789abcdef", "patient_id": DETAIL_PATIENT_ID, "event_type": "laboratory", "event_time": "2026-01-02T00:00:00Z", "data": {"test_name": "egfr", "value": 35.0}, "synthetic": True, "generator_version": "2026.1", "seed": 7, "source": "twinbean-synthetic-ehr"})])
+    iot = DetailCollection([DetailSnapshot({"observation_id": "iot-0123456789abcdef0123456789abcdef", "patient_id": DETAIL_PATIENT_ID, "measurement_type": "weight_kg", "observed_at": "2026-01-03T00:00:00Z", "data": {"value": 72.4, "unit": "kg"}, "synthetic": True, "generator_version": "2026.1", "seed": 7, "source": "twinbean-simulated-iot"})])
+    document = DetailDocument(DetailSnapshot({"patient_id": DETAIL_PATIENT_ID, "display_name": "Synthetic CKD Patient", "age": 64, "ckd_stage": "G3b"}), {"ehr_events": ehr, "iot_observations": iot})
+    repository = PatientRepository(DetailClient(document))
+
+    assert callable(getattr(repository, "get_patient", None))
+    detail = repository.get_patient(DETAIL_PATIENT_ID, event_limit=999)
+
+    assert document.get_calls == 1
+    assert document.collection_names == ["ehr_events", "iot_observations"]
+    assert ehr.order_field == "event_time"
+    assert iot.order_field == "observed_at"
+    assert ehr.limit_value == 500
+    assert iot.limit_value == 500
+    serialized = detail.model_dump(mode="json")
+    assert set(serialized) == {"patient", "ehr_history", "iot_observations"}
+    assert serialized["ehr_history"][0]["source"] == "twinbean-synthetic-ehr"
+    assert serialized["iot_observations"][0]["source"] == "twinbean-simulated-iot"
+    assert not any(isinstance(item, DetailSnapshot) for item in (*detail.ehr_history, *detail.iot_observations))
