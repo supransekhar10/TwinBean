@@ -4,6 +4,7 @@ from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .auth import require_doctor
+from .patient_routes import router as patient_router
 from .settings import get_settings
 
 settings = get_settings()
@@ -15,6 +16,7 @@ app.add_middleware(
     allow_methods=["GET"],
     allow_headers=["Authorization", "Content-Type"],
 )
+app.include_router(patient_router)
 
 
 @app.get("/health/live")
