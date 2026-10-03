@@ -7,7 +7,8 @@ import json
 import re
 from collections import Counter
 from dataclasses import dataclass
-from typing import Any
+from datetime import UTC, datetime
+from typing import Any, Mapping
 
 from pydantic import BaseModel
 
@@ -17,6 +18,7 @@ from .synthetic_data import EhrEvent, IotObservation, SyntheticCohort, Synthetic
 
 MAX_SEED_PATIENTS = 100
 MAX_RECORDS_PER_PATIENT = 100
+MAX_HISTORY_RECORDS = 500
 MAX_WRITES_PER_BATCH = 100
 MAX_BATCH_BYTES = 8 * 1024 * 1024
 MAX_DOCUMENT_BYTES = 900 * 1024
@@ -32,6 +34,14 @@ class PatientSummary(BaseModel):
     display_name: str
     age: int
     ckd_stage: str
+
+
+class PatientDetail(BaseModel):
+    """One patient with explicitly separate EHR and simulated IoT histories."""
+
+    patient: PatientSummary
+    ehr_history: list[EhrEvent]
+    iot_observations: list[IotObservation]
 
 
 @dataclass(frozen=True)
@@ -65,6 +75,38 @@ class PatientRepository:
         )
         return [self._summary_from_snapshot(snapshot) for snapshot in snapshots]
 
+    def get_patient(self, patient_id: str, event_limit: int = 100) -> PatientDetail | None:
+        """Read one owned root and its bounded EHR and IoT streams independently."""
+        if not _PATIENT_ID.fullmatch(patient_id):
+            raise ValueError("patient identifier must be a stable TwinBean identifier")
+
+        document = self._client.document(f"patients/{patient_id}")
+        root_snapshot = document.get()
+        root_data = root_snapshot.to_dict()
+        if root_data is None:
+            return None
+
+        bounded_limit = min(max(event_limit, 1), MAX_HISTORY_RECORDS)
+        ehr_events = (
+            document.collection("ehr_events")
+            .order_by("event_time")
+            .limit(bounded_limit)
+            .stream()
+        )
+        iot_observations = (
+            document.collection("iot_observations")
+            .order_by("observed_at")
+            .limit(bounded_limit)
+            .stream()
+        )
+        return PatientDetail(
+            patient=self._summary_from_data(root_data),
+            ehr_history=[self._ehr_event_from_snapshot(snapshot) for snapshot in ehr_events],
+            iot_observations=[
+                self._iot_observation_from_snapshot(snapshot) for snapshot in iot_observations
+            ],
+        )
+
     def write_cohort(self, cohort: SyntheticCohort) -> SeedResult:
         """Write a prevalidated owned-path manifest using only ``set`` batches."""
         manifest = self._build_manifest(cohort)
@@ -84,12 +126,45 @@ class PatientRepository:
 
     @staticmethod
     def _summary_from_snapshot(snapshot: Any) -> PatientSummary:
-        data = snapshot.to_dict() or {}
+        return PatientRepository._summary_from_data(snapshot.to_dict() or {})
+
+    @staticmethod
+    def _summary_from_data(data: Mapping[str, object]) -> PatientSummary:
         return PatientSummary(
             patient_id=str(data["patient_id"]),
             display_name=str(data["display_name"]),
             age=int(data["age"]),
             ckd_stage=str(data["ckd_stage"]),
+        )
+
+    @staticmethod
+    def _ehr_event_from_snapshot(snapshot: Any) -> EhrEvent:
+        data = snapshot.to_dict() or {}
+        return EhrEvent(
+            event_id=str(data["event_id"]),
+            patient_id=str(data["patient_id"]),
+            event_type=str(data["event_type"]),
+            event_time=_utc_timestamp(data["event_time"]),
+            data=_record_data(data),
+            synthetic=bool(data["synthetic"]),
+            generator_version=str(data["generator_version"]),
+            seed=int(data["seed"]),
+            source=str(data["source"]),
+        )
+
+    @staticmethod
+    def _iot_observation_from_snapshot(snapshot: Any) -> IotObservation:
+        data = snapshot.to_dict() or {}
+        return IotObservation(
+            observation_id=str(data["observation_id"]),
+            patient_id=str(data["patient_id"]),
+            measurement_type=str(data["measurement_type"]),
+            observed_at=_utc_timestamp(data["observed_at"]),
+            data=_record_data(data),
+            synthetic=bool(data["synthetic"]),
+            generator_version=str(data["generator_version"]),
+            seed=int(data["seed"]),
+            source=str(data["source"]),
         )
 
     @staticmethod
@@ -114,11 +189,28 @@ class PatientRepository:
             manifest.append((f"patients/{event.patient_id}/ehr_events/{event.event_id}", event.to_dict()))
         for observation in cohort.iot_observations:
             _validate_iot_observation(observation, cohort, patient_ids)
-            manifest.append(
-                (f"patients/{observation.patient_id}/iot_observations/{observation.observation_id}", observation.to_dict())
-            )
+            manifest.append((f"patients/{observation.patient_id}/iot_observations/{observation.observation_id}", observation.to_dict()))
         _validate_manifest(manifest)
         return manifest
+
+
+def _utc_timestamp(value: object) -> datetime:
+    if isinstance(value, datetime):
+        timestamp = value
+    elif isinstance(value, str):
+        timestamp = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    else:
+        raise ValueError("Firestore record timestamps must be UTC datetimes or ISO timestamps")
+    if timestamp.tzinfo is None or timestamp.utcoffset() != UTC.utcoffset(None):
+        raise ValueError("Firestore record timestamps must be timezone-aware UTC")
+    return timestamp.astimezone(UTC)
+
+
+def _record_data(record: Mapping[str, object]) -> Mapping[str, object]:
+    value = record.get("data", {})
+    if not isinstance(value, Mapping):
+        raise ValueError("Firestore record data must be a mapping")
+    return dict(value)
 
 
 def _validate_cohort_provenance(cohort: SyntheticCohort) -> None:
@@ -143,9 +235,7 @@ def _validate_ehr_event(event: EhrEvent, cohort: SyntheticCohort, patient_ids: s
     _validate_record_provenance(event, cohort)
 
 
-def _validate_iot_observation(
-    observation: IotObservation, cohort: SyntheticCohort, patient_ids: set[str]
-) -> None:
+def _validate_iot_observation(observation: IotObservation, cohort: SyntheticCohort, patient_ids: set[str]) -> None:
     if not _IOT_OBSERVATION_ID.fullmatch(observation.observation_id):
         raise ValueError("IoT observation path must use a TwinBean-owned observation identifier")
     if observation.patient_id not in patient_ids:
@@ -153,9 +243,7 @@ def _validate_iot_observation(
     _validate_record_provenance(observation, cohort)
 
 
-def _validate_record_provenance(
-    record: SyntheticPatient | EhrEvent | IotObservation, cohort: SyntheticCohort
-) -> None:
+def _validate_record_provenance(record: SyntheticPatient | EhrEvent | IotObservation, cohort: SyntheticCohort) -> None:
     provenance = cohort.provenance
     if not record.synthetic or not record.source.startswith("twinbean-"):
         raise ValueError("every persisted record must be explicitly synthetic TwinBean data")
@@ -185,18 +273,14 @@ def _validate_manifest(manifest: list[tuple[str, dict[str, object]]]) -> None:
             raise ValueError("document payload must be smaller than 900 KiB")
 
 
-def _batch_chunks(
-    manifest: list[tuple[str, dict[str, object]]],
-) -> list[list[tuple[str, dict[str, object]]]]:
+def _batch_chunks(manifest: list[tuple[str, dict[str, object]]]) -> list[list[tuple[str, dict[str, object]]]]:
     chunks: list[list[tuple[str, dict[str, object]]]] = []
     current: list[tuple[str, dict[str, object]]] = []
     current_bytes = 0
     for path, payload in manifest:
         entry = (path, payload)
         entry_bytes = len(path.encode("utf-8")) + _encoded_size(payload)
-        if current and (
-            len(current) >= MAX_WRITES_PER_BATCH or current_bytes + entry_bytes >= MAX_BATCH_BYTES
-        ):
+        if current and (len(current) >= MAX_WRITES_PER_BATCH or current_bytes + entry_bytes >= MAX_BATCH_BYTES):
             chunks.append(current)
             current, current_bytes = [], 0
         current.append(entry)
