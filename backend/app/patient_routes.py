@@ -1,16 +1,19 @@
 from datetime import UTC, datetime
 from typing import Annotated, Any
 
+import anyio
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 from pydantic import BaseModel, ConfigDict, field_validator
 
 from .auth import require_doctor
 from .patients import PatientDetail, PatientRepository, PatientSummary
 from .prediction_service import ClinicalResultEnvelope, PredictionService
+from .settings import get_settings
 
 
 router = APIRouter()
 _PATIENT_ID_PATTERN = r"^tbp-[0-9a-f]{32}$"
+_INFERENCE_LIMITER = anyio.CapacityLimiter(get_settings().aki_inference_concurrency)
 
 
 def get_patient_repository() -> PatientRepository:
@@ -58,13 +61,18 @@ def get_patient(
 
 
 @router.post("/patients/{patient_id}/clinical-results", response_model=ClinicalResultEnvelope)
-def generate_clinical_results(
+async def generate_clinical_results(
     patient_id: Annotated[str, Path(pattern=_PATIENT_ID_PATTERN)],
     request: ClinicalResultRequest,
     _claims: Annotated[dict[str, Any], Depends(require_doctor)],
     service: Annotated[PredictionService, Depends(get_prediction_service)],
 ) -> ClinicalResultEnvelope:
-    result = service.generate(patient_id, request.prediction_cutoff)
+    result = await anyio.to_thread.run_sync(
+        service.generate,
+        patient_id,
+        request.prediction_cutoff,
+        limiter=_INFERENCE_LIMITER,
+    )
     if result is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Patient not found.")
     return result

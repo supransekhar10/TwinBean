@@ -1,17 +1,19 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from fastapi.testclient import TestClient
 
 from app import auth as auth_module
+from app import prediction_service as prediction_service_module
 from app.clinical_rules import ClinicalRuleResult
 from app.main import app
 from app.patient_routes import get_prediction_service
 from app.patients import ClinicalContext, PatientDetail, PatientSummary
 from app.prediction_service import ClinicalResultEnvelope, UnavailableAkiPrediction
 from app.prediction_service import PredictionService
+from app.synthetic_data import generate_cohort
 
 
 PATIENT_ID = "tbp-0123456789abcdef0123456789abcdef"
@@ -196,3 +198,40 @@ def test_service_writes_one_separate_rule_and_prediction_envelope() -> None:
     _, persisted = repository.writes[0]
     assert persisted.clinical_rule.scope == "creatinine-only"
     assert persisted.prediction.status == "unavailable"
+
+
+def test_verified_engine_returns_a_complete_released_bundle_forecast() -> None:
+    """A valid active synthetic context must use the released XGBoost/SHAP path."""
+
+    cohort = generate_cohort(31, "2026.1", CUTOFF, patient_count=1)
+    patient = cohort.patients[0]
+    context = ClinicalContext(
+        cohort_id="cohort-0123456789abcdef01234567",
+        manifest_checksum="a" * 64,
+        generator_version=cohort.provenance.generator_version,
+        seed=cohort.provenance.seed,
+        patient=PatientDetail(
+            patient=PatientSummary(
+                patient_id=patient.patient_id,
+                display_name=patient.display_name,
+                age=patient.age,
+                ckd_stage=patient.ckd_stage,
+            ),
+            ehr_history=[event for event in cohort.ehr_events if event.patient_id == patient.patient_id],
+            iot_observations=[
+                observation
+                for observation in cohort.iot_observations
+                if observation.patient_id == patient.patient_id
+            ],
+        ),
+    )
+
+    engine_type = getattr(prediction_service_module, "VerifiedPredictionEngine", None)
+    assert engine_type is not None
+    result = engine_type().predict(context, CUTOFF)
+
+    assert result.status == "available"
+    assert result.outcome == "new_aki_within_24h"
+    assert result.probability is not None
+    assert result.attributions
+    assert result.prediction_cutoff == CUTOFF
