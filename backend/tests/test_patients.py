@@ -39,13 +39,15 @@ class Collection:
     def __init__(self, client: "MemoryFirestore", path: str) -> None:
         self.client, self.path = client, path
         self.order_field: str | None = None
+        self.descending = False
         self.limit_value: int | None = None
 
     def document(self, identifier: str) -> Document:
         return Document(self.client, f"{self.path}/{identifier}")
 
-    def order_by(self, field: str) -> "Collection":
+    def order_by(self, field: str, direction: str | None = None) -> "Collection":
         self.order_field = field
+        self.descending = direction == "DESCENDING"
         return self
 
     def limit(self, value: int) -> "Collection":
@@ -56,7 +58,10 @@ class Collection:
         prefix = f"{self.path}/"
         depth = self.path.count("/") + 1
         records = [(path, data) for path, data in self.client.documents.items() if path.startswith(prefix) and path.count("/") == depth]
-        records.sort(key=lambda item: (str(item[1].get(self.order_field or "")), item[0]))
+        records.sort(
+            key=lambda item: (str(item[1].get(self.order_field or "")), item[0]),
+            reverse=self.descending,
+        )
         if self.limit_value is not None:
             records = records[: self.limit_value]
         return [Snapshot(data, path.rsplit("/", maxsplit=1)[-1]) for path, data in records]
@@ -291,6 +296,28 @@ def test_failed_clinical_result_batch_leaves_all_existing_documents_unchanged() 
 
     assert client.documents == before
     assert _active(client)["cohort_id"] == active.cohort_id
+
+
+def test_clinical_result_histories_are_distinct_bounded_and_newest_first() -> None:
+    client = MemoryFirestore()
+    repository = PatientRepository(client)
+    repository.write_cohort(_cohort(24))
+    patient_id = _cohort(24).patients[0].patient_id
+    context = repository.get_clinical_context(patient_id)
+    assert context is not None
+    first_cutoff = datetime(2026, 1, 14, 12, 0, tzinfo=UTC)
+    second_cutoff = datetime(2026, 1, 15, 12, 0, tzinfo=UTC)
+
+    repository.write_clinical_results(context, _unavailable_envelope(first_cutoff))
+    repository.write_clinical_results(context, _unavailable_envelope(second_cutoff))
+
+    rules = repository.list_clinical_rules(patient_id, 1)
+    predictions = repository.list_aki_predictions(patient_id, 1)
+
+    assert [rule.prediction_cutoff for rule in rules] == [second_cutoff]
+    assert [prediction.prediction_cutoff for prediction in predictions] == [second_cutoff]
+    assert "probability" not in rules[0].model_dump()
+    assert "evidence" not in predictions[0].model_dump()
 
 
 def test_cli_reports_only_non_sensitive_seed_summary(monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> None:

@@ -58,6 +58,12 @@ AkiPredictionResult = Annotated[
 _PREDICTION_ADAPTER = TypeAdapter(AkiPredictionResult)
 
 
+def validate_aki_prediction_result(value: object) -> AkiPredictionResult:
+    """Validate a persisted prediction without allowing rule fields into its union."""
+
+    return _PREDICTION_ADAPTER.validate_python(value)
+
+
 class ClinicalResultEnvelope(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -151,9 +157,7 @@ class PredictionService:
         if context is None:
             return None
         clinical_rule = calculate_creatinine_rule(context.patient.ehr_history, cutoff)
-        prediction = _PREDICTION_ADAPTER.validate_python(
-            self._engine.predict(context, cutoff)
-        )
+        prediction = validate_aki_prediction_result(self._engine.predict(context, cutoff))
         envelope = ClinicalResultEnvelope(clinical_rule=clinical_rule, prediction=prediction)
         self._repository.write_clinical_results(context, envelope)
         return envelope

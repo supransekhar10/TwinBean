@@ -9,7 +9,7 @@ from app import auth as auth_module
 from app import prediction_service as prediction_service_module
 from app.clinical_rules import ClinicalRuleResult
 from app.main import app
-from app.patient_routes import get_prediction_service
+from app.patient_routes import get_patient_repository, get_prediction_service
 from app.patients import ClinicalContext, PatientDetail, PatientSummary
 from app.prediction_service import ClinicalResultEnvelope, UnavailableAkiPrediction
 from app.prediction_service import PredictionService
@@ -235,3 +235,93 @@ def test_verified_engine_returns_a_complete_released_bundle_forecast() -> None:
     assert result.probability is not None
     assert result.attributions
     assert result.prediction_cutoff == CUTOFF
+
+
+def test_doctor_can_read_separate_bounded_rule_and_prediction_histories(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class ResultRepository:
+        def __init__(self) -> None:
+            self.rule_calls: list[tuple[str, int]] = []
+            self.prediction_calls: list[tuple[str, int]] = []
+
+        def list_clinical_rules(self, patient_id: str, limit: int) -> list[ClinicalRuleResult]:
+            self.rule_calls.append((patient_id, limit))
+            return [
+                ClinicalRuleResult(
+                    status="insufficient_creatinine_history",
+                    calculation_time=CUTOFF,
+                    prediction_cutoff=CUTOFF,
+                    evidence=[],
+                )
+            ]
+
+        def list_aki_predictions(self, patient_id: str, limit: int) -> list[UnavailableAkiPrediction]:
+            self.prediction_calls.append((patient_id, limit))
+            return [
+                UnavailableAkiPrediction(
+                    status="unavailable",
+                    outcome="new_aki_within_24h",
+                    prediction_cutoff=CUTOFF,
+                    generated_at=CUTOFF,
+                    reasons=["missing_creatinine_history"],
+                )
+            ]
+
+    repository = ResultRepository()
+    app.dependency_overrides[get_patient_repository] = lambda: repository
+    monkeypatch.setattr(
+        auth_module,
+        "verify_firebase_token",
+        lambda _token: {"uid": "demo-doctor", "role": "doctor"},
+    )
+    headers = {"Authorization": "Bearer valid-token"}
+    try:
+        rules = client.get(f"/patients/{PATIENT_ID}/clinical-rules?limit=1", headers=headers)
+        predictions = client.get(f"/patients/{PATIENT_ID}/aki-predictions?limit=1", headers=headers)
+    finally:
+        app.dependency_overrides.clear()
+
+    assert rules.status_code == 200
+    assert predictions.status_code == 200
+    assert rules.json()[0]["status"] == "insufficient_creatinine_history"
+    assert "probability" not in rules.json()[0]
+    assert predictions.json()[0]["status"] == "unavailable"
+    assert "evidence" not in predictions.json()[0]
+    assert repository.rule_calls == [(PATIENT_ID, 1)]
+    assert repository.prediction_calls == [(PATIENT_ID, 1)]
+
+
+@pytest.mark.parametrize(
+    ("headers", "expected_status"),
+    [
+        (None, 401),
+        ({"Authorization": "Bearer non-doctor"}, 403),
+    ],
+)
+def test_denied_result_history_reads_never_invoke_the_repository(
+    monkeypatch: pytest.MonkeyPatch,
+    headers: dict[str, str] | None,
+    expected_status: int,
+) -> None:
+    class ForbiddenRepository:
+        def list_clinical_rules(self, *_args: object) -> list[object]:
+            raise AssertionError("repository read must follow require_doctor")
+
+        def list_aki_predictions(self, *_args: object) -> list[object]:
+            raise AssertionError("repository read must follow require_doctor")
+
+    app.dependency_overrides[get_patient_repository] = lambda: ForbiddenRepository()
+    monkeypatch.setattr(
+        auth_module,
+        "verify_firebase_token",
+        lambda _token: {"uid": "research-user", "role": "researcher"},
+    )
+    try:
+        rules = client.get(f"/patients/{PATIENT_ID}/clinical-rules", headers=headers)
+        predictions = client.get(f"/patients/{PATIENT_ID}/aki-predictions", headers=headers)
+    finally:
+        app.dependency_overrides.clear()
+
+    assert rules.status_code == expected_status
+    assert predictions.status_code == expected_status

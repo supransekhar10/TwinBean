@@ -6,8 +6,9 @@ from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 from pydantic import BaseModel, ConfigDict, field_validator
 
 from .auth import require_doctor
+from .clinical_rules import ClinicalRuleResult
 from .patients import PatientDetail, PatientRepository, PatientSummary
-from .prediction_service import ClinicalResultEnvelope, PredictionService
+from .prediction_service import AkiPredictionResult, ClinicalResultEnvelope, PredictionService
 from .settings import get_settings
 
 
@@ -76,3 +77,23 @@ async def generate_clinical_results(
     if result is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Patient not found.")
     return result
+
+
+@router.get("/patients/{patient_id}/clinical-rules", response_model=list[ClinicalRuleResult])
+def list_clinical_rules(
+    patient_id: Annotated[str, Path(pattern=_PATIENT_ID_PATTERN)],
+    _claims: Annotated[dict[str, Any], Depends(require_doctor)],
+    repository: Annotated[PatientRepository, Depends(get_patient_repository)],
+    limit: Annotated[int, Query(ge=1, le=100)] = 100,
+) -> list[ClinicalRuleResult]:
+    return repository.list_clinical_rules(patient_id, limit)
+
+
+@router.get("/patients/{patient_id}/aki-predictions", response_model=list[AkiPredictionResult])
+def list_aki_predictions(
+    patient_id: Annotated[str, Path(pattern=_PATIENT_ID_PATTERN)],
+    _claims: Annotated[dict[str, Any], Depends(require_doctor)],
+    repository: Annotated[PatientRepository, Depends(get_patient_repository)],
+    limit: Annotated[int, Query(ge=1, le=100)] = 100,
+) -> list[AkiPredictionResult]:
+    return repository.list_aki_predictions(patient_id, limit)

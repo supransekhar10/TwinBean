@@ -19,6 +19,7 @@ from .synthetic_data import EhrEvent, IotObservation, SyntheticCohort, Synthetic
 MAX_SEED_PATIENTS = 100
 MAX_RECORDS_PER_PATIENT = 100
 MAX_HISTORY_RECORDS = 500
+MAX_CLINICAL_RESULT_RECORDS = 100
 MAX_WRITES_PER_BATCH = 100
 MAX_BATCH_BYTES = 8 * 1024 * 1024
 MAX_DOCUMENT_BYTES = 900 * 1024
@@ -138,15 +139,35 @@ class PatientRepository:
 
     def write_clinical_results(self, context: ClinicalContext, envelope: Any) -> str:
         """Persist one validated rule and one prediction in a single immutable batch."""
+        from .prediction_service import ClinicalResultEnvelope
+
+        validated_envelope = ClinicalResultEnvelope.model_validate(envelope)
+        if (
+            validated_envelope.clinical_rule.prediction_cutoff
+            != validated_envelope.prediction.prediction_cutoff
+        ):
+            raise ValueError("clinical rule and prediction must share one cutoff")
         active = self._load_active_cohort()
-        if active is None or (active.cohort_id, active.manifest_checksum) != (
+        if active is None or (
+            active.cohort_id,
+            active.manifest_checksum,
+            active.generator_version,
+            active.seed,
+        ) != (
             context.cohort_id,
             context.manifest_checksum,
+            context.generator_version,
+            context.seed,
         ):
             raise ValueError("clinical context no longer belongs to the active immutable cohort")
         patient_id = context.patient.patient.patient_id
-        rule_payload = envelope.clinical_rule.model_dump(mode="json")
-        prediction_payload = envelope.prediction.model_dump(mode="json")
+        owned_root = (
+            self._cohort_document(active.cohort_id).collection("patients").document(patient_id).get().to_dict()
+        )
+        if owned_root is None or self._summary_from_data(owned_root, active).patient_id != patient_id:
+            raise ValueError("clinical context patient no longer belongs to the active immutable cohort")
+        rule_payload = validated_envelope.clinical_rule.model_dump(mode="json")
+        prediction_payload = validated_envelope.prediction.model_dump(mode="json")
         result_id = _clinical_result_id(context, rule_payload, prediction_payload)
         rule_document = _clinical_result_payload(
             context, patient_id, result_id, "clinical_rule", rule_payload
@@ -162,6 +183,60 @@ class PatientRepository:
         batch.set(self._client.document(f"{patient_path}/aki_predictions/{result_id}"), prediction_document)
         batch.commit()
         return result_id
+
+    def list_clinical_rules(self, patient_id: str, limit: int) -> list["ClinicalRuleResult"]:
+        """Return only active-cohort current-rule documents, newest calculation first."""
+
+        from .clinical_rules import ClinicalRuleResult
+
+        return [
+            ClinicalRuleResult.model_validate(payload)
+            for payload in self._list_clinical_result_payloads(
+                patient_id, limit, "clinical_rules", "clinical_rule", "calculation_time"
+            )
+        ]
+
+    def list_aki_predictions(self, patient_id: str, limit: int) -> list[Any]:
+        """Return only active-cohort future-prediction documents, newest generation first."""
+
+        from .prediction_service import validate_aki_prediction_result
+
+        return [
+            validate_aki_prediction_result(payload)
+            for payload in self._list_clinical_result_payloads(
+                patient_id, limit, "aki_predictions", "aki_prediction", "generated_at"
+            )
+        ]
+
+    def _list_clinical_result_payloads(
+        self,
+        patient_id: str,
+        limit: int,
+        collection: str,
+        result_type: str,
+        order_field: str,
+    ) -> list[dict[str, object]]:
+        if not _PATIENT_ID.fullmatch(patient_id):
+            raise ValueError("patient identifier must be a stable TwinBean identifier")
+        active = self._load_active_cohort()
+        if active is None:
+            return []
+        bounded_limit = min(max(limit, 1), MAX_CLINICAL_RESULT_RECORDS)
+        patient_document = self._cohort_document(active.cohort_id).collection("patients").document(patient_id)
+        root_data = patient_document.get().to_dict()
+        if root_data is None:
+            return []
+        self._summary_from_data(root_data, active)
+        snapshots = (
+            patient_document.collection(collection)
+            .order_by(order_field, direction="DESCENDING")
+            .limit(bounded_limit)
+            .stream()
+        )
+        return [
+            _clinical_result_response_payload(snapshot.to_dict() or {}, active, patient_id, result_type)
+            for snapshot in snapshots
+        ]
 
     def _get_patient_for_active(
         self, active: _ActiveCohort, patient_id: str, event_limit: int
@@ -419,6 +494,40 @@ def _validate_clinical_result_payload(payload: Mapping[str, object], result_type
         raise ValueError("clinical rule and prediction fields must remain separate")
     if _encoded_size(dict(payload)) >= MAX_DOCUMENT_BYTES:
         raise ValueError("clinical result payload must be smaller than 900 KiB")
+
+
+_CLINICAL_RESULT_METADATA_FIELDS = frozenset(
+    {
+        "result_id",
+        "result_type",
+        "patient_id",
+        "cohort_id",
+        "manifest_checksum",
+        "generator_version",
+        "seed",
+        "synthetic",
+        "data_classification",
+        "source",
+    }
+)
+
+
+def _clinical_result_response_payload(
+    payload: Mapping[str, object],
+    active: _ActiveCohort,
+    patient_id: str,
+    result_type: str,
+) -> dict[str, object]:
+    _validate_clinical_result_payload(payload, result_type)
+    if (
+        payload.get("patient_id") != patient_id
+        or payload.get("cohort_id") != active.cohort_id
+        or payload.get("manifest_checksum") != active.manifest_checksum
+        or payload.get("generator_version") != active.generator_version
+        or payload.get("seed") != active.seed
+    ):
+        raise ValueError("clinical result does not belong to the active patient context")
+    return {key: value for key, value in payload.items() if key not in _CLINICAL_RESULT_METADATA_FIELDS}
 
 
 def _cohort_id(manifest: list[tuple[str, dict[str, object]]]) -> str:
