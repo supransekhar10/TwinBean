@@ -163,6 +163,9 @@ class PredictionService:
         clinical_rule = calculate_creatinine_rule(context.patient.ehr_history, cutoff)
         prediction = validate_aki_prediction_result(self._engine.predict(context, cutoff))
         envelope = ClinicalResultEnvelope(clinical_rule=clinical_rule, prediction=prediction)
+        existing = self._repository.get_existing_clinical_results(context, envelope)
+        if existing is not None:
+            return ClinicalResultEnvelope.model_validate(existing)
         self._repository.write_clinical_results(context, envelope)
         return envelope
 

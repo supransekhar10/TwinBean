@@ -192,6 +192,56 @@ class PatientRepository:
         batch.commit()
         return result_id
 
+    def get_existing_clinical_results(
+        self, context: ClinicalContext, envelope: Any
+    ) -> Any | None:
+        """Return the immutable result for the envelope identity, if already stored."""
+        from .prediction_service import ClinicalResultEnvelope
+
+        validated_envelope = ClinicalResultEnvelope.model_validate(envelope)
+        rule_payload = validated_envelope.clinical_rule.model_dump(mode="json")
+        prediction_payload = validated_envelope.prediction.model_dump(mode="json")
+        result_id = _clinical_result_id(context, rule_payload, prediction_payload)
+        patient_id = context.patient.patient.patient_id
+        patient_path = _patient_path(context.cohort_id, patient_id)
+        rule_data = (
+            self._client.document(f"{patient_path}/clinical_rules/{result_id}")
+            .get()
+            .to_dict()
+        )
+        prediction_data = (
+            self._client.document(f"{patient_path}/aki_predictions/{result_id}")
+            .get()
+            .to_dict()
+        )
+        if rule_data is None and prediction_data is None:
+            return None
+        if rule_data is None or prediction_data is None:
+            raise ValueError("clinical result identity has incomplete immutable evidence")
+
+        active = self._load_active_cohort()
+        if active is None or (
+            active.cohort_id,
+            active.manifest_checksum,
+            active.generator_version,
+            active.seed,
+        ) != (
+            context.cohort_id,
+            context.manifest_checksum,
+            context.generator_version,
+            context.seed,
+        ):
+            raise ValueError("clinical context no longer belongs to the active immutable cohort")
+        stored_rule = _clinical_result_response_payload(
+            rule_data, active, patient_id, "clinical_rule"
+        )
+        stored_prediction = _clinical_result_response_payload(
+            prediction_data, active, patient_id, "aki_prediction"
+        )
+        return ClinicalResultEnvelope.model_validate(
+            {"clinical_rule": stored_rule, "prediction": stored_prediction}
+        )
+
     def list_clinical_rules(self, patient_id: str, limit: int) -> list["ClinicalRuleResult"]:
         """Return only active-cohort current-rule documents, newest calculation first."""
 

@@ -190,6 +190,11 @@ def test_service_writes_one_separate_rule_and_prediction_envelope() -> None:
             self.writes.append((context, envelope))
             return "clinical-test"
 
+        def get_existing_clinical_results(
+            self, _context: ClinicalContext, _envelope: ClinicalResultEnvelope
+        ) -> None:
+            return None
+
     repository = RecordingRepository()
     result = PredictionService(repository).generate(PATIENT_ID, CUTOFF)  # type: ignore[arg-type]
 
@@ -198,6 +203,74 @@ def test_service_writes_one_separate_rule_and_prediction_envelope() -> None:
     _, persisted = repository.writes[0]
     assert persisted.clinical_rule.scope == "creatinine-only"
     assert persisted.prediction.status == "unavailable"
+
+
+def test_same_cutoff_retry_returns_existing_immutable_result() -> None:
+    class IncrementingEngine:
+        def __init__(self) -> None:
+            self.calls = 0
+
+        def predict(
+            self, _context: ClinicalContext, prediction_cutoff: datetime
+        ) -> UnavailableAkiPrediction:
+            self.calls += 1
+            return UnavailableAkiPrediction(
+                status="unavailable",
+                outcome="new_aki_within_24h",
+                prediction_cutoff=prediction_cutoff,
+                generated_at=prediction_cutoff + timedelta(seconds=self.calls),
+                reasons=["model_engine_unavailable"],
+            )
+
+    context = ClinicalContext(
+        cohort_id="cohort-0123456789abcdef01234567",
+        manifest_checksum="a" * 64,
+        generator_version="2026.1",
+        seed=41,
+        patient=PatientDetail(
+            patient=PatientSummary(
+                patient_id=PATIENT_ID,
+                display_name="Synthetic CKD Patient",
+                age=64,
+                ckd_stage="G3b",
+            ),
+            ehr_history=[],
+            iot_observations=[],
+        ),
+    )
+
+    class RetryRepository:
+        def __init__(self) -> None:
+            self.stored: ClinicalResultEnvelope | None = None
+            self.write_calls = 0
+
+        def get_clinical_context(self, patient_id: str) -> ClinicalContext:
+            assert patient_id == PATIENT_ID
+            return context
+
+        def get_existing_clinical_results(
+            self, _context: ClinicalContext, _envelope: ClinicalResultEnvelope
+        ) -> ClinicalResultEnvelope | None:
+            return self.stored
+
+        def write_clinical_results(
+            self, _context: ClinicalContext, envelope: ClinicalResultEnvelope
+        ) -> str:
+            self.write_calls += 1
+            self.stored = envelope.model_copy(deep=True)
+            return "clinical-retry"
+
+    repository = RetryRepository()
+    engine = IncrementingEngine()
+    service = PredictionService(repository, engine)
+
+    first = service.generate(PATIENT_ID, CUTOFF)  # type: ignore[arg-type]
+    second = service.generate(PATIENT_ID, CUTOFF)  # type: ignore[arg-type]
+
+    assert first is not None
+    assert second == first
+    assert engine.calls == 2
+    assert repository.write_calls == 1
 
 
 def test_verified_engine_returns_a_complete_released_bundle_forecast() -> None:
