@@ -144,7 +144,7 @@ class PatientRepository:
             context.manifest_checksum,
         ):
             raise ValueError("clinical context no longer belongs to the active immutable cohort")
-        patient_id = context.patient.patient_id
+        patient_id = context.patient.patient.patient_id
         rule_payload = envelope.clinical_rule.model_dump(mode="json")
         prediction_payload = envelope.prediction.model_dump(mode="json")
         result_id = _clinical_result_id(context, rule_payload, prediction_payload)
@@ -367,7 +367,7 @@ def _clinical_result_id(
 ) -> str:
     identity = {
         "cohort_id": context.cohort_id,
-        "patient_id": context.patient.patient_id,
+        "patient_id": context.patient.patient.patient_id,
         "prediction_cutoff": prediction_payload["prediction_cutoff"],
         "rule_version": rule_payload["rule_version"],
         "outcome": prediction_payload["outcome"],
