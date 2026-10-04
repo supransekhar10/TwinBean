@@ -1,0 +1,92 @@
+{
+  "fixture_version": "2026.1",
+  "rubric_version": "kdigo-creatinine-reference-rubric-v1",
+  "source": "KDIGO Clinical Practice Guideline for Acute Kidney Injury (2012), Recommendation 2.1.1",
+  "reviewer_role": "nephrologist review pending",
+  "synthetic_provenance": {
+    "generator_version": "reference-scenarios-v1",
+    "seed": 31415
+  },
+  "scenarios": [
+    {
+      "name": "absolute_rise_below_threshold_at_48_hours",
+      "events": [{"id": "abs-low-baseline", "hours_before_cutoff": 48, "value": 1.0, "unit": "mg/dL"}, {"id": "abs-low-current", "hours_before_cutoff": 0, "value": 1.29, "unit": "mg/dL"}],
+      "expected_status": "criteria_not_met",
+      "expected_criteria_evaluated": ["serum_creatinine_rise_0_3_mg_dl_within_48h", "serum_creatinine_ratio_1_5_within_7d"],
+      "expected_criteria_met": [],
+      "expected_evidence_event_ids": ["abs-low-baseline", "abs-low-current"]
+    },
+    {
+      "name": "absolute_rise_threshold_at_48_hours",
+      "events": [{"id": "abs-edge-baseline", "hours_before_cutoff": 48, "value": 1.0, "unit": "mg/dL"}, {"id": "abs-edge-current", "hours_before_cutoff": 0, "value": 1.3, "unit": "mg/dL"}],
+      "expected_status": "criteria_met",
+      "expected_criteria_evaluated": ["serum_creatinine_rise_0_3_mg_dl_within_48h", "serum_creatinine_ratio_1_5_within_7d"],
+      "expected_criteria_met": ["serum_creatinine_rise_0_3_mg_dl_within_48h"],
+      "expected_evidence_event_ids": ["abs-edge-baseline", "abs-edge-current"]
+    },
+    {
+      "name": "absolute_rise_just_outside_48_hours",
+      "events": [{"id": "abs-outside-baseline", "hours_before_cutoff": 48.01, "value": 1.0, "unit": "mg/dL"}, {"id": "abs-outside-current", "hours_before_cutoff": 0, "value": 1.3, "unit": "mg/dL"}],
+      "expected_status": "criteria_not_met",
+      "expected_criteria_evaluated": ["serum_creatinine_ratio_1_5_within_7d"],
+      "expected_criteria_met": [],
+      "expected_evidence_event_ids": ["abs-outside-baseline", "abs-outside-current"]
+    },
+    {
+      "name": "ratio_below_threshold_at_seven_days",
+      "events": [{"id": "ratio-low-baseline", "hours_before_cutoff": 168, "value": 1.0, "unit": "mg/dL"}, {"id": "ratio-low-current", "hours_before_cutoff": 0, "value": 1.49, "unit": "mg/dL"}],
+      "expected_status": "criteria_not_met",
+      "expected_criteria_evaluated": ["serum_creatinine_ratio_1_5_within_7d"],
+      "expected_criteria_met": [],
+      "expected_evidence_event_ids": ["ratio-low-baseline", "ratio-low-current"]
+    },
+    {
+      "name": "ratio_threshold_at_seven_days",
+      "events": [{"id": "ratio-edge-baseline", "hours_before_cutoff": 168, "value": 1.0, "unit": "mg/dL"}, {"id": "ratio-edge-current", "hours_before_cutoff": 0, "value": 1.5, "unit": "mg/dL"}],
+      "expected_status": "criteria_met",
+      "expected_criteria_evaluated": ["serum_creatinine_ratio_1_5_within_7d"],
+      "expected_criteria_met": ["serum_creatinine_ratio_1_5_within_7d"],
+      "expected_evidence_event_ids": ["ratio-edge-baseline", "ratio-edge-current"]
+    },
+    {
+      "name": "ratio_baseline_just_outside_seven_days",
+      "events": [{"id": "ratio-outside-baseline", "hours_before_cutoff": 168.01, "value": 1.0, "unit": "mg/dL"}, {"id": "ratio-outside-current", "hours_before_cutoff": 0, "value": 1.5, "unit": "mg/dL"}],
+      "expected_status": "insufficient_creatinine_history",
+      "expected_criteria_evaluated": [],
+      "expected_criteria_met": [],
+      "expected_evidence_event_ids": ["ratio-outside-current"]
+    },
+    {
+      "name": "invalid_creatinine_unit",
+      "events": [{"id": "invalid-unit", "hours_before_cutoff": 0, "value": 100.0, "unit": "umol/L"}],
+      "expected_status": "insufficient_creatinine_history",
+      "expected_criteria_evaluated": [],
+      "expected_criteria_met": [],
+      "expected_evidence_event_ids": []
+    },
+    {
+      "name": "missing_reproducible_baseline",
+      "events": [{"id": "single-current", "hours_before_cutoff": 0, "value": 1.8, "unit": "mg/dL"}],
+      "expected_status": "insufficient_creatinine_history",
+      "expected_criteria_evaluated": [],
+      "expected_criteria_met": [],
+      "expected_evidence_event_ids": ["single-current"]
+    },
+    {
+      "name": "future_creatinine_is_not_current_evidence",
+      "events": [{"id": "future-current", "hours_before_cutoff": -1, "value": 1.8, "unit": "mg/dL"}],
+      "expected_status": "insufficient_creatinine_history",
+      "expected_criteria_evaluated": [],
+      "expected_criteria_met": [],
+      "expected_evidence_event_ids": []
+    },
+    {
+      "name": "non_utc_creatinine_is_indeterminate",
+      "events": [{"id": "naive-current", "hours_before_cutoff": 0, "value": 1.8, "unit": "mg/dL", "timestamp_kind": "naive"}],
+      "expected_status": "insufficient_creatinine_history",
+      "expected_criteria_evaluated": [],
+      "expected_criteria_met": [],
+      "expected_evidence_event_ids": []
+    }
+  ]
+}
