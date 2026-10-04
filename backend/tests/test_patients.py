@@ -7,6 +7,8 @@ from typing import Any
 import pytest
 
 from app.patients import ACTIVE_COHORT_PATH, PatientRepository
+from app.clinical_rules import ClinicalRuleResult
+from app.prediction_service import ClinicalResultEnvelope, UnavailableAkiPrediction
 from app.synthetic_data import generate_cohort
 
 
@@ -115,6 +117,24 @@ def _cohort(seed: int, count: int = 1):
 
 def _active(client: MemoryFirestore) -> dict[str, object]:
     return client.documents[ACTIVE_COHORT_PATH]
+
+
+def _unavailable_envelope(cutoff: datetime) -> ClinicalResultEnvelope:
+    return ClinicalResultEnvelope(
+        clinical_rule=ClinicalRuleResult(
+            status="insufficient_creatinine_history",
+            calculation_time=cutoff,
+            prediction_cutoff=cutoff,
+            evidence=[],
+        ),
+        prediction=UnavailableAkiPrediction(
+            status="unavailable",
+            outcome="new_aki_within_24h",
+            prediction_cutoff=cutoff,
+            generated_at=cutoff,
+            reasons=["model_engine_unavailable"],
+        ),
+    )
 
 
 def test_writer_stages_only_versioned_owned_paths_then_publishes_one_pointer() -> None:
@@ -227,6 +247,50 @@ def test_read_rejects_child_with_mismatched_parent_or_provenance(field: str, val
 
     with pytest.raises(ValueError):
         repository.get_patient(patient_id)
+
+
+def test_clinical_results_use_one_deterministic_id_in_separate_owned_paths() -> None:
+    client = MemoryFirestore()
+    repository = PatientRepository(client)
+    seeded = repository.write_cohort(_cohort(21))
+    patient_id = _cohort(21).patients[0].patient_id
+    context = repository.get_clinical_context(patient_id)
+    assert context is not None
+    cutoff = datetime(2026, 1, 15, 12, 0, tzinfo=UTC)
+    pointer_before = dict(_active(client))
+
+    first = repository.write_clinical_results(context, _unavailable_envelope(cutoff))
+    second = repository.write_clinical_results(context, _unavailable_envelope(cutoff))
+
+    assert first == second
+    base = f"twinbean_cohorts/{seeded.cohort_id}/patients/{patient_id}"
+    rule_path = f"{base}/clinical_rules/{first}"
+    prediction_path = f"{base}/aki_predictions/{first}"
+    assert set(client.documents[rule_path]) & {"probability", "attributions", "reasons", "outcome"} == set()
+    assert set(client.documents[prediction_path]) & {"evidence", "scope", "limitation", "rule_version"} == set()
+    assert client.documents[prediction_path]["status"] == "unavailable"
+    assert _active(client) == pointer_before
+
+
+def test_failed_clinical_result_batch_leaves_all_existing_documents_unchanged() -> None:
+    client = MemoryFirestore()
+    repository = PatientRepository(client)
+    repository.write_cohort(_cohort(22))
+    active = repository.write_cohort(_cohort(23))
+    patient_id = _cohort(23).patients[0].patient_id
+    context = repository.get_clinical_context(patient_id)
+    assert context is not None
+    client.documents["unrelated/canary"] = {"value": "untouched"}
+    before = {path: dict(payload) for path, payload in client.documents.items()}
+    client.fail_batch = client.batch_commits + 1
+
+    with pytest.raises(RuntimeError, match="batch"):
+        repository.write_clinical_results(
+            context, _unavailable_envelope(datetime(2026, 1, 15, 12, 0, tzinfo=UTC))
+        )
+
+    assert client.documents == before
+    assert _active(client)["cohort_id"] == active.cohort_id
 
 
 def test_cli_reports_only_non_sensitive_seed_summary(monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> None:

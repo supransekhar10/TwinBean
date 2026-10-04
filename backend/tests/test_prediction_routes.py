@@ -102,6 +102,62 @@ def test_non_doctor_token_never_runs_clinical_work(
     assert prediction_service.calls == []
 
 
+def test_invalid_token_never_runs_clinical_work(
+    monkeypatch: pytest.MonkeyPatch, prediction_service: FakePredictionService
+) -> None:
+    monkeypatch.setattr(
+        auth_module,
+        "verify_firebase_token",
+        lambda _token: (_ for _ in ()).throw(ValueError("invalid")),
+    )
+
+    response = _request({"Authorization": "Bearer invalid-token"})
+
+    assert response.status_code == 401
+    assert prediction_service.calls == []
+
+
+def test_invalid_identifier_and_naive_cutoff_are_rejected_before_clinical_work(
+    monkeypatch: pytest.MonkeyPatch, prediction_service: FakePredictionService
+) -> None:
+    monkeypatch.setattr(
+        auth_module,
+        "verify_firebase_token",
+        lambda _token: {"uid": "demo-doctor", "role": "doctor"},
+    )
+
+    bad_identifier = client.post(
+        "/patients/not-a-stable-id/clinical-results",
+        headers={"Authorization": "Bearer valid-token"},
+        json={"prediction_cutoff": CUTOFF.isoformat().replace("+00:00", "Z")},
+    )
+    naive_cutoff = client.post(
+        f"/patients/{PATIENT_ID}/clinical-results",
+        headers={"Authorization": "Bearer valid-token"},
+        json={"prediction_cutoff": "2026-01-15T12:00:00"},
+    )
+
+    assert bad_identifier.status_code == 422
+    assert naive_cutoff.status_code == 422
+    assert prediction_service.calls == []
+
+
+def test_missing_patient_returns_typed_404_after_authorization(
+    monkeypatch: pytest.MonkeyPatch, prediction_service: FakePredictionService
+) -> None:
+    monkeypatch.setattr(
+        auth_module,
+        "verify_firebase_token",
+        lambda _token: {"uid": "demo-doctor", "role": "doctor"},
+    )
+    prediction_service.generate = lambda _patient_id, _cutoff: None  # type: ignore[method-assign]
+
+    response = _request({"Authorization": "Bearer valid-token"})
+
+    assert response.status_code == 404
+    assert response.json() == {"detail": "Patient not found."}
+
+
 def test_service_writes_one_separate_rule_and_prediction_envelope() -> None:
     class RecordingRepository:
         def __init__(self) -> None:
