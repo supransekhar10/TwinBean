@@ -122,7 +122,7 @@ Use the Pydantic v2 dependency already resolved by FastAPI; do not introduce an 
 
 ### Minimal training and inference entry point
 
-`FEATURE_COLUMNS` is a reviewed, versioned allowlist. It intentionally contains neither identifiers nor outcome/rule data. Keep `remainder="drop"` as a second defensive layer, but reject unexpected request columns before this point rather than silently ignoring them.
+`FEATURE_COLUMNS` is a reviewed, versioned combined-stream allowlist. It intentionally contains neither identifiers nor outcome/rule data and includes `latest_systolic_bp_mmhg` as the required meaningful IoT-derived input for Phase 3. Keep `remainder="drop"` as a second defensive layer, but reject unexpected request columns before this point rather than silently ignoring them.
 
 ```python
 from __future__ import annotations
@@ -133,7 +133,12 @@ from sklearn.impute import SimpleImputer
 from sklearn.pipeline import Pipeline
 from xgboost import XGBClassifier
 
-FEATURE_COLUMNS = ["age_years", "latest_creatinine_mg_dl", "creatinine_delta_48h_mg_dl"]
+FEATURE_COLUMNS = [
+    "age_years",
+    "latest_creatinine_mg_dl",
+    "creatinine_delta_48h_mg_dl",
+    "latest_systolic_bp_mmhg",
+]
 
 
 def make_aki_pipeline() -> Pipeline:
@@ -352,7 +357,7 @@ Token cost, semantic caching, and cheaper LLM sub-models are not applicable. Bud
 
 ### Release-gate policy
 
-Phase 3 evaluates whether the rule and inference contracts are safe, reproducible, and honest on synthetic scenarios. It does **not** claim clinical performance or perform the formal EHR-only versus combined-stream comparison; those patient-held-out results belong to Phase 6. Every Critical rubric below is a non-averaged release gate: one failing reference scenario blocks the affected artifact/version. High-priority code checks must also pass completely, and required human reviewers must approve the versioned review record.
+Phase 3 evaluates whether the rule and inference contracts are safe, reproducible, and honest on synthetic scenarios. It does **not** claim clinical performance or perform the formal EHR-only versus combined-stream comparison; those patient-held-out results belong to Phase 6. Every Critical automated rubric below is a non-averaged release gate: one failing reference scenario blocks the affected artifact/version, and all High-priority code checks must pass completely. Clinical reviewer sign-off is unavailable in this autonomous prototype run, so the Phase 3 release gate is the automated traceability/wording fixture set and immutable contract manifest. Human-review entries below remain explicitly outstanding prerequisites before clinical use or any clinical-validation claim and must never be represented as approved.
 
 | Dimension | Priority | Concrete rubric | Measurement and release threshold |
 |---|---|---|---|
@@ -392,7 +397,7 @@ Create the reference set during implementation, before merging the first rule/in
 - 8 unavailable/adversarial cases: missing required input, stale input, future observation, invalid unit/type, forbidden identifier/label/rule field, unknown provenance, manifest/checksum/package mismatch, and SHAP name/additivity failure.
 - 2 end-to-end integrity cases: authorized valid generation and forced mid-operation failure proving separate result types, no partial/cross-type write, and no active-cohort corruption. Authorization-denial cases remain in the route test suite.
 
-Expected deterministic fields come from independently authored fixtures, not from copying implementation output. A nephrologist labels rule/baseline/wording cases; a clinical informatician labels cutoff, unit, provenance, and freshness cases; a methods researcher signs the label/split definitions. Store reviewer, rubric version, source, generator version/seed, and expected reason codes with the fixture. Hand-picked scenarios test contracts, not discrimination or calibration; expand them whenever a defect is found. Phase 6 creates the separate patient-held-out evaluation dataset and uses the same held-out patients for EHR-only and combined-stream models.
+Expected deterministic fields come from independently authored fixtures, not from copying implementation output. During this autonomous run, fixtures identify the required nephrologist, clinical-informatician, and methods-reviewer roles and record review status as outstanding rather than fabricating a named approval. Store reviewer role/status, rubric version, source, generator version/seed, and expected reason codes with the fixture. Qualified reviewers must approve the applicable rule/baseline/wording, cutoff/unit/provenance/freshness, and label/split definitions before clinical use or a clinical-validation claim. Hand-picked scenarios test contracts, not discrimination or calibration; expand them whenever a defect is found. Phase 6 creates the separate patient-held-out evaluation dataset and uses the same held-out patients for EHR-only and combined-stream models.
 
 ### CI/CD gate
 
