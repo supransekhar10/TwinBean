@@ -55,7 +55,7 @@
 - [x] **PRED-02**: Prediction pipeline uses scikit-learn and XGBoost with explicit handling for invalid, missing, or stale inputs.
 - [x] **PRED-03**: Prediction output preserves “unavailable” as a distinct state and never converts it to zero risk.
 - [x] **PRED-04**: Current clinical rules and future model predictions are calculated, stored, and returned as distinct result types.
-- [ ] **PRED-05**: Prediction pipeline produces SHAP feature-attribution data for valid predictions.
+- [x] **PRED-05**: Prediction pipeline produces SHAP feature-attribution data for valid predictions.
 
 ### Evaluation
 
@@ -128,7 +128,7 @@
 | PRED-02 | Phase 3 | Complete |
 | PRED-03 | Phase 3 | Complete |
 | PRED-04 | Phase 3 | Complete |
-| PRED-05 | Phase 3 | Pending |
+| PRED-05 | Phase 3 | Complete |
 | EVAL-01 | Phase 6 | Pending |
 | EVAL-02 | Phase 6 | Pending |
 | EVAL-03 | Phase 6 | Pending |
