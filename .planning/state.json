@@ -16,7 +16,7 @@
     {
       "number": "3",
       "name": "Clinical Rules and AKI Prediction",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "number": "4",
@@ -39,5 +39,5 @@
     "label": "Advance to the next step",
     "reason": "Phase 03 of 6 · 33% · executing"
   },
-  "updated_at": "2026-10-04T13:02:52.366Z"
+  "updated_at": "2026-10-04T13:21:14.438Z"
 }

@@ -51,7 +51,7 @@
 - [x] **DATA-01**: System generates or loads synthetic histories for adult patients with chronic kidney disease.
 - [x] **DATA-02**: System produces a simulated IoT stream independently from patient history data.
 - [x] **DATA-03**: System stores prototype patient, observation, rule, and prediction data in Cloud Firestore rather than SQLite.
-- [ ] **PRED-01**: Model predicts whether a new acute kidney injury will occur within 24 hours for an adult with chronic kidney disease.
+- [x] **PRED-01**: Model predicts whether a new acute kidney injury will occur within 24 hours for an adult with chronic kidney disease.
 - [ ] **PRED-02**: Prediction pipeline uses scikit-learn and XGBoost with explicit handling for invalid, missing, or stale inputs.
 - [x] **PRED-03**: Prediction output preserves “unavailable” as a distinct state and never converts it to zero risk.
 - [x] **PRED-04**: Current clinical rules and future model predictions are calculated, stored, and returned as distinct result types.
@@ -124,7 +124,7 @@
 | DATA-01 | Phase 2 | Complete |
 | DATA-02 | Phase 2 | Complete |
 | DATA-03 | Phase 2 | Complete |
-| PRED-01 | Phase 3 | Pending |
+| PRED-01 | Phase 3 | Complete |
 | PRED-02 | Phase 3 | Pending |
 | PRED-03 | Phase 3 | Complete |
 | PRED-04 | Phase 3 | Complete |
