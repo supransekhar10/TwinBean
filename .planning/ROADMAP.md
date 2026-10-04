@@ -18,7 +18,7 @@ TwinBean advances through six vertical phases: establish a secure runnable appli
 - Decimal phases are reserved for urgent insertions.
 
 - [x] **Phase 1: Secure Foundation and Firebase Access** - Run both applications locally and prove doctor-only authenticated backend access. (completed 2026-10-03)
-- [ ] **Phase 2: Synthetic Kidney Data and Firestore** - Persist separate synthetic EHR and IoT streams behind doctor-only access.
+- [x] **Phase 2: Synthetic Kidney Data and Firestore** - Persist separate synthetic EHR and IoT streams behind doctor-only access. (completed 2026-10-04)
 - [ ] **Phase 3: Clinical Rules and AKI Prediction** - Produce distinct clinical-rule and 24-hour AKI prediction results with safe unavailable states.
 - [ ] **Phase 4: Risk-Ranked Doctor Dashboard** - Let doctors review every monitored patient with valid risks prioritized safely.
 - [ ] **Phase 5: Patient Digital Twin Detail** - Present history, trends, rules, predictions, warnings, and explanations in distinct sections.
@@ -130,7 +130,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Secure Foundation and Firebase Access | 3/3 | Complete | 2026-10-03 |
-| 2. Synthetic Kidney Data and Firestore | 4/4 | In Progress|  |
+| 2. Synthetic Kidney Data and Firestore | 4/4 | Complete    | 2026-10-04 |
 | 3. Clinical Rules and AKI Prediction | 0/TBD | Not started | - |
 | 4. Risk-Ranked Doctor Dashboard | 0/TBD | Not started | - |
 | 5. Patient Digital Twin Detail | 0/TBD | Not started | - |
