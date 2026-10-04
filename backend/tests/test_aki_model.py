@@ -85,10 +85,34 @@ def test_loader_rejects_untrusted_or_tampered_members_before_deserialization(rel
     assert loaded is False
 
     schema = release_dir / "feature-schema.json"
-    schema.write_text(schema.read_text(encoding="utf-8") + " ", encoding="utf-8")
-    with pytest.raises(ArtifactIntegrityError):
-        load_verified_bundle(release_dir, artifact_root=release_dir.parent)
-    assert loaded is False
+    original = schema.read_text(encoding="utf-8")
+    try:
+        schema.write_text(original + " ", encoding="utf-8")
+        with pytest.raises(ArtifactIntegrityError):
+            load_verified_bundle(release_dir, artifact_root=release_dir.parent)
+        assert loaded is False
+    finally:
+        schema.write_text(original, encoding="utf-8")
+
+    manifest_path = release_dir / "manifest.json"
+    manifest_text = manifest_path.read_text(encoding="utf-8")
+    try:
+        for mutate in (
+            lambda manifest: manifest.pop("label_version"),
+            lambda manifest: manifest["package_versions"].update({"shap": "0.0.0"}),
+            lambda manifest: manifest["feature_schema"].update({"raw_feature_columns": ["wrong"]}),
+            lambda manifest: manifest["feature_schema"]["units"].update({"age_years": "days"}),
+            lambda manifest: manifest["cohort"].pop("snapshot_sha256"),
+            lambda manifest: manifest["partition"].update({"train_group_digest": "patient-id-leak"}),
+        ):
+            manifest = json.loads(manifest_text)
+            mutate(manifest)
+            manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+            with pytest.raises(ArtifactIntegrityError):
+                load_verified_bundle(release_dir, artifact_root=release_dir.parent)
+            assert loaded is False
+    finally:
+        manifest_path.write_text(manifest_text, encoding="utf-8")
 
 
 def test_verified_bundle_returns_a_finite_deterministic_positive_probability(release_dir: Path) -> None:
