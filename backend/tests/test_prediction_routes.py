@@ -11,7 +11,11 @@ from app.clinical_rules import ClinicalRuleResult
 from app.main import app
 from app.patient_routes import get_patient_repository, get_prediction_service
 from app.patients import ClinicalContext, PatientDetail, PatientSummary
-from app.prediction_service import ClinicalResultEnvelope, UnavailableAkiPrediction
+from app.prediction_service import (
+    ClinicalResultEnvelope,
+    SafeUnavailablePredictionEngine,
+    UnavailableAkiPrediction,
+)
 from app.prediction_service import PredictionService
 from app.synthetic_data import generate_cohort
 
@@ -271,6 +275,64 @@ def test_same_cutoff_retry_returns_existing_immutable_result() -> None:
     assert second == first
     assert engine.calls == 2
     assert repository.write_calls == 1
+
+
+def test_concurrent_loser_returns_winning_immutable_result() -> None:
+    context = ClinicalContext(
+        cohort_id="cohort-0123456789abcdef01234567",
+        manifest_checksum="a" * 64,
+        generator_version="2026.1",
+        seed=42,
+        patient=PatientDetail(
+            patient=PatientSummary(
+                patient_id=PATIENT_ID,
+                display_name="Synthetic CKD Patient",
+                age=64,
+                ckd_stage="G3b",
+            ),
+            ehr_history=[],
+            iot_observations=[],
+        ),
+    )
+    winner = ClinicalResultEnvelope(
+        clinical_rule=ClinicalRuleResult(
+            status="insufficient_creatinine_history",
+            calculation_time=CUTOFF,
+            prediction_cutoff=CUTOFF,
+            evidence=[],
+        ),
+        prediction=UnavailableAkiPrediction(
+            status="unavailable",
+            outcome="new_aki_within_24h",
+            prediction_cutoff=CUTOFF,
+            generated_at=CUTOFF,
+            reasons=["model_engine_unavailable"],
+        ),
+    )
+
+    class RacingRepository:
+        def __init__(self) -> None:
+            self.reads = 0
+
+        def get_clinical_context(self, _patient_id: str) -> ClinicalContext:
+            return context
+
+        def get_existing_clinical_results(
+            self, _context: ClinicalContext, _envelope: ClinicalResultEnvelope
+        ) -> ClinicalResultEnvelope | None:
+            self.reads += 1
+            return winner if self.reads == 2 else None
+
+        def write_clinical_results(
+            self, _context: ClinicalContext, _envelope: ClinicalResultEnvelope
+        ) -> str:
+            raise RuntimeError("transaction lost concurrent race")
+
+    result = PredictionService(
+        RacingRepository(), SafeUnavailablePredictionEngine()
+    ).generate(PATIENT_ID, CUTOFF)  # type: ignore[arg-type]
+
+    assert result == winner
 
 
 def test_verified_engine_returns_a_complete_released_bundle_forecast() -> None:

@@ -166,7 +166,13 @@ class PredictionService:
         existing = self._repository.get_existing_clinical_results(context, envelope)
         if existing is not None:
             return ClinicalResultEnvelope.model_validate(existing)
-        self._repository.write_clinical_results(context, envelope)
+        try:
+            self._repository.write_clinical_results(context, envelope)
+        except Exception:
+            concurrent_winner = self._repository.get_existing_clinical_results(context, envelope)
+            if concurrent_winner is not None:
+                return ClinicalResultEnvelope.model_validate(concurrent_winner)
+            raise
         return envelope
 
 
