@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
+from math import isfinite
 from typing import Iterable, Literal, Sequence
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -143,7 +144,12 @@ def _validated_cutoff_evidence(
         if event.data.get("unit") != "mg/dL":
             invalid_reasons.append("unsupported_creatinine_unit")
             continue
-        if not isinstance(value, (int, float)) or isinstance(value, bool) or value <= 0:
+        if (
+            not isinstance(value, (int, float))
+            or isinstance(value, bool)
+            or not isfinite(value)
+            or value <= 0
+        ):
             invalid_reasons.append("invalid_creatinine_value")
             continue
         evidence.append(

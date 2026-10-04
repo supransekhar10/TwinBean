@@ -96,3 +96,32 @@ def test_ratio_window_is_anchored_to_latest_eligible_measurement_not_cutoff() ->
     assert result.criteria_met == ["serum_creatinine_ratio_1_5_within_7d"]
     assert result.baseline_evidence is not None
     assert result.baseline_evidence.event_id == "ratio-baseline-seven-days-before-latest"
+
+
+@pytest.mark.parametrize("value", [float("nan"), float("inf"), float("-inf")])
+def test_non_finite_creatinine_values_fail_closed(value: float) -> None:
+    result = calculate_creatinine_rule(
+        [
+            _event(
+                {
+                    "id": "valid-baseline",
+                    "hours_before_cutoff": 24,
+                    "value": 1.0,
+                    "unit": "mg/dL",
+                }
+            ),
+            _event(
+                {
+                    "id": "non-finite-latest",
+                    "hours_before_cutoff": 0,
+                    "value": value,
+                    "unit": "mg/dL",
+                }
+            ),
+        ],
+        CUTOFF,
+    )
+
+    assert result.status == "insufficient_creatinine_history"
+    assert result.insufficiency_reasons == ["invalid_creatinine_value"]
+    assert result.criteria_met == []
