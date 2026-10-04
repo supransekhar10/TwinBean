@@ -80,7 +80,7 @@ def calculate_creatinine_rule(
     baseline = _lowest_evidence(
         item
         for item in evidence
-        if cutoff - timedelta(days=7) <= item.observed_at < latest.observed_at
+        if latest.observed_at - timedelta(days=7) <= item.observed_at < latest.observed_at
     )
 
     criteria_evaluated: list[CreatinineCriterion] = []
