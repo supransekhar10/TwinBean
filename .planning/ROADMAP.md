@@ -49,7 +49,7 @@ Plans:
 
 ### Phase 2: Synthetic Kidney Data and Firestore
 
-**Goal:** Authorized doctors can access synthetic CKD patient histories and a separately modeled simulated IoT stream stored in Firestore.
+**Goal:** As a doctor, I want to access synthetic CKD patient histories and a separately modeled simulated IoT stream stored in Firestore, so that I can review aligned synthetic kidney evidence securely.
 **Mode:** mvp
 **Depends on:** Phase 1
 **Requirements:** FIRE-01, FIRE-05, DATA-01, DATA-02, DATA-03
@@ -67,7 +67,7 @@ Plans:
 
 ### Phase 3: Clinical Rules and AKI Prediction
 
-**Goal:** The system generates auditable current-rule results and valid 24-hour AKI predictions as separate clinical concepts.
+**Goal:** As a doctor, I want to receive auditable current-rule results and valid 24-hour AKI predictions as separate clinical concepts, so that I can distinguish observed clinical status from future risk.
 **Mode:** mvp
 **Depends on:** Phase 2
 **Requirements:** PRED-01, PRED-02, PRED-03, PRED-04, PRED-05
@@ -81,7 +81,7 @@ Plans:
 
 ### Phase 4: Risk-Ranked Doctor Dashboard
 
-**Goal:** Doctors can triage all monitored patients while seeing valid future risk, prediction freshness, and data-quality limitations honestly.
+**Goal:** As a doctor, I want to triage all monitored patients with honest future-risk, freshness, and data-quality information, so that I can prioritize valid high-risk predictions without losing access to other patients.
 **Mode:** mvp
 **Depends on:** Phase 3
 **Requirements:** DASH-01, DASH-02, DASH-03, DASH-04, DASH-05
@@ -96,7 +96,7 @@ Plans:
 
 ### Phase 5: Patient Digital Twin Detail
 
-**Goal:** Doctors can inspect a simulated patient's complete kidney context without conflating observations, clinical rules, future risk, or explanations.
+**Goal:** As a doctor, I want to inspect a simulated patient's complete kidney context in distinct evidence sections, so that I do not conflate observations, clinical rules, future risk, or explanations.
 **Mode:** mvp
 **Depends on:** Phase 4
 **Requirements:** PAT-01, PAT-02, PAT-03, PAT-04, PAT-05
@@ -111,7 +111,7 @@ Plans:
 
 ### Phase 6: Leakage-Resistant Model Evaluation
 
-**Goal:** Researchers can inspect reproducible, actual evaluation results that fairly compare EHR-only and combined-stream prediction.
+**Goal:** As a researcher, I want to inspect reproducible actual evaluation results comparing EHR-only and combined-stream prediction, so that I can assess synthetic model performance under patient-level and time-safe evaluation.
 **Mode:** mvp
 **Depends on:** Phase 3
 **Requirements:** EVAL-01, EVAL-02, EVAL-03, EVAL-04, EVAL-05, EVAL-06
