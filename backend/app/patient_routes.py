@@ -1,9 +1,12 @@
+from datetime import UTC, datetime
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
+from pydantic import BaseModel, ConfigDict, field_validator
 
 from .auth import require_doctor
 from .patients import PatientDetail, PatientRepository, PatientSummary
+from .prediction_service import ClinicalResultEnvelope, PredictionService
 
 
 router = APIRouter()
@@ -13,6 +16,24 @@ _PATIENT_ID_PATTERN = r"^tbp-[0-9a-f]{32}$"
 def get_patient_repository() -> PatientRepository:
     """Provide the server-only repository after doctor authorization succeeds."""
     return PatientRepository.from_firestore()
+
+
+def get_prediction_service() -> PredictionService:
+    """Construct the server-only clinical orchestration service after authorization."""
+    return PredictionService(PatientRepository.from_firestore())
+
+
+class ClinicalResultRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    prediction_cutoff: datetime
+
+    @field_validator("prediction_cutoff")
+    @classmethod
+    def timezone_aware_utc(cls, value: datetime) -> datetime:
+        if value.tzinfo is None or value.utcoffset() != UTC.utcoffset(None):
+            raise ValueError("prediction_cutoff must be timezone-aware UTC")
+        return value.astimezone(UTC)
 
 
 @router.get("/patients", response_model=list[PatientSummary])
@@ -34,3 +55,16 @@ def get_patient(
     if detail is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Patient not found.")
     return detail
+
+
+@router.post("/patients/{patient_id}/clinical-results", response_model=ClinicalResultEnvelope)
+def generate_clinical_results(
+    patient_id: Annotated[str, Path(pattern=_PATIENT_ID_PATTERN)],
+    request: ClinicalResultRequest,
+    _claims: Annotated[dict[str, Any], Depends(require_doctor)],
+    service: Annotated[PredictionService, Depends(get_prediction_service)],
+) -> ClinicalResultEnvelope:
+    result = service.generate(patient_id, request.prediction_cutoff)
+    if result is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Patient not found.")
+    return result

@@ -74,6 +74,17 @@ class _ActiveCohort:
     source: str
 
 
+@dataclass(frozen=True)
+class ClinicalContext:
+    """Immutable active-cohort data available to one clinical-result operation."""
+
+    cohort_id: str
+    manifest_checksum: str
+    generator_version: str
+    seed: int
+    patient: PatientDetail
+
+
 class PatientRepository:
     """Server-only Firestore reads and validated immutable cohort publication."""
 
@@ -105,6 +116,56 @@ class PatientRepository:
         active = self._load_active_cohort()
         if active is None:
             return None
+        return self._get_patient_for_active(active, patient_id, event_limit)
+
+    def get_clinical_context(self, patient_id: str) -> ClinicalContext | None:
+        """Resolve one patient from the validated active immutable cohort only."""
+        if not _PATIENT_ID.fullmatch(patient_id):
+            raise ValueError("patient identifier must be a stable TwinBean identifier")
+        active = self._load_active_cohort()
+        if active is None:
+            return None
+        patient = self._get_patient_for_active(active, patient_id, MAX_HISTORY_RECORDS)
+        if patient is None:
+            return None
+        return ClinicalContext(
+            cohort_id=active.cohort_id,
+            manifest_checksum=active.manifest_checksum,
+            generator_version=active.generator_version,
+            seed=active.seed,
+            patient=patient,
+        )
+
+    def write_clinical_results(self, context: ClinicalContext, envelope: Any) -> str:
+        """Persist one validated rule and one prediction in a single immutable batch."""
+        active = self._load_active_cohort()
+        if active is None or (active.cohort_id, active.manifest_checksum) != (
+            context.cohort_id,
+            context.manifest_checksum,
+        ):
+            raise ValueError("clinical context no longer belongs to the active immutable cohort")
+        patient_id = context.patient.patient_id
+        rule_payload = envelope.clinical_rule.model_dump(mode="json")
+        prediction_payload = envelope.prediction.model_dump(mode="json")
+        result_id = _clinical_result_id(context, rule_payload, prediction_payload)
+        rule_document = _clinical_result_payload(
+            context, patient_id, result_id, "clinical_rule", rule_payload
+        )
+        prediction_document = _clinical_result_payload(
+            context, patient_id, result_id, "aki_prediction", prediction_payload
+        )
+        _validate_clinical_result_payload(rule_document, "clinical_rule")
+        _validate_clinical_result_payload(prediction_document, "aki_prediction")
+        patient_path = _patient_path(context.cohort_id, patient_id)
+        batch = self._client.batch()
+        batch.set(self._client.document(f"{patient_path}/clinical_rules/{result_id}"), rule_document)
+        batch.set(self._client.document(f"{patient_path}/aki_predictions/{result_id}"), prediction_document)
+        batch.commit()
+        return result_id
+
+    def _get_patient_for_active(
+        self, active: _ActiveCohort, patient_id: str, event_limit: int
+    ) -> PatientDetail | None:
         document = self._cohort_document(active.cohort_id).collection("patients").document(patient_id)
         root_data = document.get().to_dict()
         if root_data is None:
@@ -297,6 +358,67 @@ def _cohort_path(cohort_id: str) -> str:
 
 def _patient_path(cohort_id: str, patient_id: str) -> str:
     return f"{_cohort_path(cohort_id)}/patients/{patient_id}"
+
+
+def _clinical_result_id(
+    context: ClinicalContext,
+    rule_payload: Mapping[str, object],
+    prediction_payload: Mapping[str, object],
+) -> str:
+    identity = {
+        "cohort_id": context.cohort_id,
+        "patient_id": context.patient.patient_id,
+        "prediction_cutoff": prediction_payload["prediction_cutoff"],
+        "rule_version": rule_payload["rule_version"],
+        "outcome": prediction_payload["outcome"],
+        "model_version": prediction_payload.get("model_version") or "unavailable-engine-v1",
+        "feature_schema_version": prediction_payload.get("feature_schema_version") or "unavailable-schema-v1",
+    }
+    canonical = json.dumps(identity, sort_keys=True, separators=(",", ":"), ensure_ascii=True)
+    return f"clinical-{hashlib.sha256(canonical.encode('utf-8')).hexdigest()[:32]}"
+
+
+def _clinical_result_payload(
+    context: ClinicalContext,
+    patient_id: str,
+    result_id: str,
+    result_type: str,
+    payload: Mapping[str, object],
+) -> dict[str, object]:
+    return {
+        **dict(payload),
+        "result_id": result_id,
+        "result_type": result_type,
+        "patient_id": patient_id,
+        "cohort_id": context.cohort_id,
+        "manifest_checksum": context.manifest_checksum,
+        "generator_version": context.generator_version,
+        "seed": context.seed,
+        "synthetic": True,
+        "data_classification": "synthetic",
+        "source": "twinbean-clinical-result",
+    }
+
+
+def _validate_clinical_result_payload(payload: Mapping[str, object], result_type: str) -> None:
+    if payload.get("result_type") != result_type:
+        raise ValueError("clinical result type must match its owned collection")
+    if not isinstance(payload.get("result_id"), str) or not str(payload["result_id"]).startswith("clinical-"):
+        raise ValueError("clinical result must have a deterministic owned identifier")
+    if payload.get("synthetic") is not True or payload.get("data_classification") != "synthetic":
+        raise ValueError("clinical results must retain synthetic provenance")
+    if payload.get("source") != "twinbean-clinical-result":
+        raise ValueError("clinical result source must be TwinBean-owned")
+    if result_type == "clinical_rule":
+        forbidden = {"probability", "attributions", "reasons", "outcome"}
+    else:
+        forbidden = {"evidence", "scope", "limitation", "rule_version"}
+        if payload.get("status") == "unavailable" and ({"probability", "attributions"} & set(payload)):
+            raise ValueError("unavailable prediction must not include probability or attributions")
+    if forbidden & set(payload):
+        raise ValueError("clinical rule and prediction fields must remain separate")
+    if _encoded_size(dict(payload)) >= MAX_DOCUMENT_BYTES:
+        raise ValueError("clinical result payload must be smaller than 900 KiB")
 
 
 def _cohort_id(manifest: list[tuple[str, dict[str, object]]]) -> str:

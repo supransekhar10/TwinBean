@@ -6,12 +6,48 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app import auth as auth_module
+from app.clinical_rules import ClinicalRuleResult
 from app.main import app
+from app.patient_routes import get_prediction_service
+from app.patients import ClinicalContext, PatientDetail, PatientSummary
+from app.prediction_service import ClinicalResultEnvelope, UnavailableAkiPrediction
+from app.prediction_service import PredictionService
 
 
 PATIENT_ID = "tbp-0123456789abcdef0123456789abcdef"
 CUTOFF = datetime(2026, 1, 15, 12, 0, tzinfo=UTC)
 client = TestClient(app)
+
+
+class FakePredictionService:
+    def __init__(self) -> None:
+        self.calls: list[tuple[str, datetime]] = []
+
+    def generate(self, patient_id: str, prediction_cutoff: datetime) -> ClinicalResultEnvelope:
+        self.calls.append((patient_id, prediction_cutoff))
+        return ClinicalResultEnvelope(
+            clinical_rule=ClinicalRuleResult(
+                status="insufficient_creatinine_history",
+                calculation_time=prediction_cutoff,
+                prediction_cutoff=prediction_cutoff,
+                evidence=[],
+            ),
+            prediction=UnavailableAkiPrediction(
+                status="unavailable",
+                outcome="new_aki_within_24h",
+                prediction_cutoff=prediction_cutoff,
+                generated_at=prediction_cutoff,
+                reasons=["model_engine_unavailable"],
+            ),
+        )
+
+
+@pytest.fixture
+def prediction_service() -> FakePredictionService:
+    service = FakePredictionService()
+    app.dependency_overrides[get_prediction_service] = lambda: service
+    yield service
+    app.dependency_overrides.clear()
 
 
 def _request(headers: dict[str, str] | None = None) -> object:
@@ -24,6 +60,7 @@ def _request(headers: dict[str, str] | None = None) -> object:
 
 def test_doctor_can_generate_separate_current_rule_and_unavailable_forecast(
     monkeypatch: pytest.MonkeyPatch,
+    prediction_service: FakePredictionService,
 ) -> None:
     monkeypatch.setattr(
         auth_module,
@@ -41,14 +78,18 @@ def test_doctor_can_generate_separate_current_rule_and_unavailable_forecast(
     assert payload["prediction"]["reasons"]
     assert "probability" not in payload["prediction"]
     assert "attributions" not in payload["prediction"]
+    assert prediction_service.calls == [(PATIENT_ID, CUTOFF)]
 
 
-def test_missing_token_never_runs_clinical_work() -> None:
+def test_missing_token_never_runs_clinical_work(prediction_service: FakePredictionService) -> None:
     response = _request()
     assert response.status_code == 401
+    assert prediction_service.calls == []
 
 
-def test_non_doctor_token_never_runs_clinical_work(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_non_doctor_token_never_runs_clinical_work(
+    monkeypatch: pytest.MonkeyPatch, prediction_service: FakePredictionService
+) -> None:
     monkeypatch.setattr(
         auth_module,
         "verify_firebase_token",
@@ -58,3 +99,44 @@ def test_non_doctor_token_never_runs_clinical_work(monkeypatch: pytest.MonkeyPat
     response = _request({"Authorization": "Bearer valid-token"})
 
     assert response.status_code == 403
+    assert prediction_service.calls == []
+
+
+def test_service_writes_one_separate_rule_and_prediction_envelope() -> None:
+    class RecordingRepository:
+        def __init__(self) -> None:
+            self.writes: list[tuple[ClinicalContext, ClinicalResultEnvelope]] = []
+
+        def get_clinical_context(self, patient_id: str) -> ClinicalContext:
+            assert patient_id == PATIENT_ID
+            return ClinicalContext(
+                cohort_id="cohort-0123456789abcdef01234567",
+                manifest_checksum="a" * 64,
+                generator_version="2026.1",
+                seed=7,
+                patient=PatientDetail(
+                    patient=PatientSummary(
+                        patient_id=PATIENT_ID,
+                        display_name="Synthetic CKD Patient",
+                        age=64,
+                        ckd_stage="G3b",
+                    ),
+                    ehr_history=[],
+                    iot_observations=[],
+                ),
+            )
+
+        def write_clinical_results(
+            self, context: ClinicalContext, envelope: ClinicalResultEnvelope
+        ) -> str:
+            self.writes.append((context, envelope))
+            return "clinical-test"
+
+    repository = RecordingRepository()
+    result = PredictionService(repository).generate(PATIENT_ID, CUTOFF)  # type: ignore[arg-type]
+
+    assert result is not None
+    assert len(repository.writes) == 1
+    _, persisted = repository.writes[0]
+    assert persisted.clinical_rule.scope == "creatinine-only"
+    assert persisted.prediction.status == "unavailable"
