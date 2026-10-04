@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
-from typing import Literal, Sequence
+from typing import Iterable, Literal, Sequence
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -157,7 +157,7 @@ def _validated_cutoff_evidence(
     return evidence, sorted(set(invalid_reasons))
 
 
-def _lowest_evidence(items: Sequence[CreatinineEvidence] | object) -> CreatinineEvidence | None:
+def _lowest_evidence(items: Iterable[CreatinineEvidence]) -> CreatinineEvidence | None:
     candidates = list(items)
     if not candidates:
         return None
