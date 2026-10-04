@@ -11,7 +11,13 @@ from .synthetic_data import EhrEvent
 
 
 CLINICAL_RULE_VERSION = "kdigo-creatinine-2012-v1"
-KDIGO_SOURCE = "KDIGO Clinical Practice Guideline for Acute Kidney Injury (2012)"
+KDIGO_SOURCE = "KDIGO Clinical Practice Guideline for Acute Kidney Injury (2012), Recommendation 2.1.1"
+ABSOLUTE_RISE_CRITERION = "serum_creatinine_rise_0_3_mg_dl_within_48h"
+RATIO_CRITERION = "serum_creatinine_ratio_1_5_within_7d"
+CreatinineCriterion = Literal[
+    "serum_creatinine_rise_0_3_mg_dl_within_48h",
+    "serum_creatinine_ratio_1_5_within_7d",
+]
 
 
 class CreatinineEvidence(BaseModel):
@@ -33,6 +39,16 @@ class ClinicalRuleResult(BaseModel):
     calculation_time: datetime
     prediction_cutoff: datetime
     evidence: list[CreatinineEvidence]
+    criteria_evaluated: list[CreatinineCriterion] = Field(default_factory=list)
+    criteria_met: list[CreatinineCriterion] = Field(default_factory=list)
+    latest_evidence: CreatinineEvidence | None = None
+    absolute_rise_reference: CreatinineEvidence | None = None
+    absolute_rise_mg_dl: float | None = None
+    baseline_method: Literal["lowest_creatinine_in_prior_7_days", "unavailable"] = "unavailable"
+    baseline_value_mg_dl: float | None = None
+    baseline_evidence: CreatinineEvidence | None = None
+    ratio_to_baseline: float | None = None
+    insufficiency_reasons: list[str] = Field(default_factory=list)
     source: str = KDIGO_SOURCE
     rule_version: str = CLINICAL_RULE_VERSION
     scope: Literal["creatinine-only"] = "creatinine-only"
@@ -42,65 +58,131 @@ class ClinicalRuleResult(BaseModel):
 def calculate_creatinine_rule(
     ehr_history: Sequence[EhrEvent], prediction_cutoff: datetime
 ) -> ClinicalRuleResult:
-    """Evaluate only supported KDIGO creatinine thresholds at a fixed UTC cutoff.
+    """Evaluate supported KDIGO 2012 serum-creatinine criteria at a fixed UTC cutoff.
 
-    The selected seven-day minimum is preserved in ``evidence`` so the result remains
-    auditable without implying a complete AKI assessment.
+    Only data available at the cutoff is considered.  A negative result means no
+    supported *creatinine* criterion was met; it never represents a full AKI
+    assessment because this prototype has no validated urine-output input.
     """
     cutoff = _require_utc(prediction_cutoff)
-    evidence = [
-        item
-        for event in ehr_history
-        if event.event_time <= cutoff
-        if (item := _creatinine_evidence(event)) is not None
-    ]
-    evidence.sort(key=lambda item: item.observed_at)
+    evidence, invalid_reasons = _validated_cutoff_evidence(ehr_history, cutoff)
+    if invalid_reasons:
+        return _insufficient_result(cutoff, evidence, invalid_reasons)
     if not evidence:
-        return ClinicalRuleResult(
-            status="insufficient_creatinine_history",
-            calculation_time=cutoff,
-            prediction_cutoff=cutoff,
-            evidence=[],
-        )
+        return _insufficient_result(cutoff, [], ["no_valid_creatinine_evidence"])
 
     latest = evidence[-1]
-    last_48_hours = [item for item in evidence if item.observed_at >= cutoff - timedelta(hours=48)]
-    last_7_days = [item for item in evidence if item.observed_at >= cutoff - timedelta(days=7)]
-    if not last_7_days:
-        return ClinicalRuleResult(
-            status="insufficient_creatinine_history",
-            calculation_time=cutoff,
-            prediction_cutoff=cutoff,
-            evidence=evidence,
+    absolute_reference = _lowest_evidence(
+        item
+        for item in evidence
+        if latest.observed_at - timedelta(hours=48) <= item.observed_at < latest.observed_at
+    )
+    baseline = _lowest_evidence(
+        item
+        for item in evidence
+        if cutoff - timedelta(days=7) <= item.observed_at < latest.observed_at
+    )
+
+    criteria_evaluated: list[CreatinineCriterion] = []
+    criteria_met: list[CreatinineCriterion] = []
+    absolute_rise_mg_dl: float | None = None
+    ratio_to_baseline: float | None = None
+    if absolute_reference is not None:
+        criteria_evaluated.append(ABSOLUTE_RISE_CRITERION)
+        absolute_rise_mg_dl = round(latest.value_mg_dl - absolute_reference.value_mg_dl, 6)
+        if absolute_rise_mg_dl >= 0.3:
+            criteria_met.append(ABSOLUTE_RISE_CRITERION)
+    if baseline is not None:
+        criteria_evaluated.append(RATIO_CRITERION)
+        ratio_to_baseline = round(latest.value_mg_dl / baseline.value_mg_dl, 6)
+        if ratio_to_baseline >= 1.5:
+            criteria_met.append(RATIO_CRITERION)
+
+    selected_evidence = _selected_evidence(latest, absolute_reference, baseline)
+    if not criteria_evaluated:
+        return _insufficient_result(
+            cutoff,
+            selected_evidence,
+            ["no_reproducible_creatinine_comparison"],
+            latest=latest,
         )
 
-    baseline = min(last_7_days, key=lambda item: item.value_mg_dl)
-    delta_criterion = any(
-        latest.value_mg_dl - item.value_mg_dl >= 0.3
-        for item in last_48_hours
-        if item.observed_at <= latest.observed_at
-    )
-    ratio_criterion = latest.value_mg_dl >= 1.5 * baseline.value_mg_dl
     return ClinicalRuleResult(
-        status="criteria_met" if delta_criterion or ratio_criterion else "criteria_not_met",
+        status="criteria_met" if criteria_met else "criteria_not_met",
+        calculation_time=cutoff,
+        prediction_cutoff=cutoff,
+        evidence=selected_evidence,
+        criteria_evaluated=criteria_evaluated,
+        criteria_met=criteria_met,
+        latest_evidence=latest,
+        absolute_rise_reference=absolute_reference,
+        absolute_rise_mg_dl=absolute_rise_mg_dl,
+        baseline_method="lowest_creatinine_in_prior_7_days" if baseline else "unavailable",
+        baseline_value_mg_dl=baseline.value_mg_dl if baseline else None,
+        baseline_evidence=baseline,
+        ratio_to_baseline=ratio_to_baseline,
+    )
+
+
+def _validated_cutoff_evidence(
+    ehr_history: Sequence[EhrEvent], cutoff: datetime
+) -> tuple[list[CreatinineEvidence], list[str]]:
+    evidence: list[CreatinineEvidence] = []
+    invalid_reasons: list[str] = []
+    for event in ehr_history:
+        if event.event_type != "laboratory" or event.data.get("test_name") != "creatinine":
+            continue
+        try:
+            observed_at = _require_utc(event.event_time)
+        except ValueError:
+            invalid_reasons.append("non_utc_creatinine_time")
+            continue
+        if observed_at > cutoff:
+            continue
+        value = event.data.get("value")
+        if event.data.get("unit") != "mg/dL":
+            invalid_reasons.append("unsupported_creatinine_unit")
+            continue
+        if not isinstance(value, (int, float)) or isinstance(value, bool) or value <= 0:
+            invalid_reasons.append("invalid_creatinine_value")
+            continue
+        evidence.append(
+            CreatinineEvidence(
+                event_id=event.event_id,
+                observed_at=observed_at,
+                value_mg_dl=float(value),
+            )
+        )
+    evidence.sort(key=lambda item: (item.observed_at, item.event_id))
+    return evidence, sorted(set(invalid_reasons))
+
+
+def _lowest_evidence(items: Sequence[CreatinineEvidence] | object) -> CreatinineEvidence | None:
+    candidates = list(items)
+    if not candidates:
+        return None
+    return min(candidates, key=lambda item: (item.value_mg_dl, item.observed_at, item.event_id))
+
+
+def _selected_evidence(*items: CreatinineEvidence | None) -> list[CreatinineEvidence]:
+    selected = {item.event_id: item for item in items if item is not None}
+    return sorted(selected.values(), key=lambda item: (item.observed_at, item.event_id))
+
+
+def _insufficient_result(
+    cutoff: datetime,
+    evidence: list[CreatinineEvidence],
+    reasons: list[str],
+    *,
+    latest: CreatinineEvidence | None = None,
+) -> ClinicalRuleResult:
+    return ClinicalRuleResult(
+        status="insufficient_creatinine_history",
         calculation_time=cutoff,
         prediction_cutoff=cutoff,
         evidence=evidence,
-    )
-
-
-def _creatinine_evidence(event: EhrEvent) -> CreatinineEvidence | None:
-    if event.event_type != "laboratory" or event.data.get("test_name") != "creatinine":
-        return None
-    value = event.data.get("value")
-    if not isinstance(value, (int, float)) or isinstance(value, bool):
-        return None
-    if event.data.get("unit") != "mg/dL":
-        return None
-    return CreatinineEvidence(
-        event_id=event.event_id,
-        observed_at=_require_utc(event.event_time),
-        value_mg_dl=float(value),
+        latest_evidence=latest,
+        insufficiency_reasons=reasons,
     )
 
 
