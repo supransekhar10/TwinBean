@@ -267,6 +267,15 @@ def test_clinical_results_use_one_deterministic_id_in_separate_owned_paths() -> 
     first = repository.write_clinical_results(context, _unavailable_envelope(cutoff))
     second = repository.write_clinical_results(context, _unavailable_envelope(cutoff))
 
+    conflicting = _unavailable_envelope(cutoff)
+    conflicting.prediction.reasons = ["different_attempt_evidence"]
+    documents_before_conflict = {path: dict(payload) for path, payload in client.documents.items()}
+
+    with pytest.raises(ValueError, match="immutable prior evidence"):
+        repository.write_clinical_results(context, conflicting)
+
+    assert client.documents == documents_before_conflict
+
     assert first == second
     base = f"twinbean_cohorts/{seeded.cohort_id}/patients/{patient_id}"
     rule_path = f"{base}/clinical_rules/{first}"
