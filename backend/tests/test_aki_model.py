@@ -7,7 +7,7 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-from app import aki_model
+from app import aki_explanations, aki_model
 from app.aki_features import FEATURE_SCHEMA
 
 
@@ -128,3 +128,41 @@ def test_verified_bundle_returns_a_finite_deterministic_positive_probability(rel
 
     assert 0.0 <= first <= 1.0
     assert first == pytest.approx(second, abs=1e-12)
+
+
+def test_explanation_uses_exact_transformed_feature_order_and_raw_margin_additivity(release_dir: Path) -> None:
+    assert hasattr(aki_explanations, "explain_prediction")
+
+    from app.aki_model import load_verified_bundle
+
+    bundle = load_verified_bundle(release_dir, artifact_root=release_dir.parent)
+    frame = pd.DataFrame([[61.0, 1.4, 0.1, 130.0]], columns=list(FEATURE_SCHEMA.columns))
+    attributions = aki_explanations.explain_prediction(bundle, frame)
+    transformed = bundle.pipeline.named_steps["features"].transform(frame)
+    classifier = bundle.pipeline.named_steps["classifier"]
+    raw_margin = float(classifier.predict(transformed, output_margin=True)[0])
+
+    assert [item.feature for item in attributions] == list(transformed.columns)
+    assert all(item.semantics == "model influence in raw-margin/log-odds space; not causal" for item in attributions)
+    assert sum(item.shap_margin for item in attributions) + attributions[0].expected_value == pytest.approx(raw_margin, abs=1e-6)
+
+
+def test_explanation_integrity_failure_is_typed_and_never_returns_attributions(release_dir: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from app.aki_model import load_verified_bundle
+
+    bundle = load_verified_bundle(release_dir, artifact_root=release_dir.parent)
+    frame = pd.DataFrame([[61.0, 1.4, 0.1, 130.0]], columns=list(FEATURE_SCHEMA.columns))
+
+    class NonFiniteExplainer:
+        expected_value = 0.0
+
+        def __init__(self, *_: object, **__: object) -> None:
+            pass
+
+        def shap_values(self, values: pd.DataFrame, *, check_additivity: bool) -> list[list[float]]:
+            assert check_additivity is True
+            return [[float("nan")] * len(values.columns)]
+
+    monkeypatch.setattr(aki_explanations.shap, "TreeExplainer", NonFiniteExplainer)
+    with pytest.raises(aki_explanations.ExplanationIntegrityError):
+        aki_explanations.explain_prediction(bundle, frame)
