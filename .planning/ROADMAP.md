@@ -83,7 +83,7 @@ Plans:
 - [x] 03-03-PLAN.md
 - [x] 03-04-PLAN.md
 - [x] 03-05-PLAN.md
-- [ ] 03-06-PLAN.md
+- [x] 03-06-PLAN.md
 
 ### Phase 4: Risk-Ranked Doctor Dashboard
 
@@ -137,7 +137,7 @@ Plans:
 |-------|----------------|--------|-----------|
 | 1. Secure Foundation and Firebase Access | 3/3 | Complete | 2026-10-03 |
 | 2. Synthetic Kidney Data and Firestore | 4/4 | Complete    | 2026-10-04 |
-| 3. Clinical Rules and AKI Prediction | 5/6 | In Progress|  |
+| 3. Clinical Rules and AKI Prediction | 6/6 | In Progress|  |
 | 4. Risk-Ranked Doctor Dashboard | 0/TBD | Not started | - |
 | 5. Patient Digital Twin Detail | 0/TBD | Not started | - |
 | 6. Leakage-Resistant Model Evaluation | 0/TBD | Not started | - |
