@@ -8,9 +8,9 @@ import re
 from collections import Counter
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import Any, Mapping
+from typing import Annotated, Any, Literal, Mapping
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field
 
 from .firestore import get_firestore_client
 from .synthetic_data import EhrEvent, IotObservation, SyntheticCohort, SyntheticPatient
@@ -49,6 +49,47 @@ class PatientDetail(BaseModel):
     patient: PatientSummary
     ehr_history: list[EhrEvent]
     iot_observations: list[IotObservation]
+
+
+class DashboardClinicalRuleSummary(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    status: Literal["criteria_met", "criteria_not_met", "insufficient_creatinine_history"]
+    calculation_time: datetime
+    prediction_cutoff: datetime
+    insufficiency_reasons: list[str] = Field(default_factory=list)
+
+
+class AvailableDashboardPrediction(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    status: Literal["available"]
+    probability: float = Field(ge=0.0, le=1.0)
+    prediction_cutoff: datetime
+    generated_at: datetime
+    warnings: list[str] = Field(default_factory=list)
+
+
+class UnavailableDashboardPrediction(BaseModel):
+    """Unavailable has no probability field, so missing risk cannot serialize as zero."""
+
+    model_config = ConfigDict(extra="forbid")
+    status: Literal["unavailable"]
+    prediction_cutoff: datetime | None = None
+    generated_at: datetime | None = None
+    reasons: list[str] = Field(min_length=1)
+    warnings: list[str] = Field(default_factory=list)
+
+
+DashboardPredictionSummary = Annotated[
+    AvailableDashboardPrediction | UnavailableDashboardPrediction,
+    Field(discriminator="status"),
+]
+
+
+class DashboardPatient(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    patient: PatientSummary
+    current_rule: DashboardClinicalRuleSummary | None
+    prediction: DashboardPredictionSummary
 
 
 @dataclass(frozen=True)
@@ -109,6 +150,42 @@ class PatientRepository:
             .stream()
         )
         return [self._summary_from_data(snapshot.to_dict() or {}, active) for snapshot in snapshots]
+
+    def list_dashboard_patients(self, limit: int) -> list[DashboardPatient]:
+        """Project only latest stored evidence; this method never invokes prediction."""
+        rows: list[DashboardPatient] = []
+        for patient in self.list_patients(min(max(limit, 1), MAX_SEED_PATIENTS)):
+            rules = self.list_clinical_rules(patient.patient_id, 1)
+            predictions = self.list_aki_predictions(patient.patient_id, 1)
+            current_rule = None
+            if rules:
+                rule = rules[0]
+                current_rule = DashboardClinicalRuleSummary(
+                    status=rule.status,
+                    calculation_time=rule.calculation_time,
+                    prediction_cutoff=rule.prediction_cutoff,
+                    insufficiency_reasons=rule.insufficiency_reasons,
+                )
+            if not predictions:
+                prediction: DashboardPredictionSummary = UnavailableDashboardPrediction(
+                    status="unavailable", reasons=["no_stored_prediction"]
+                )
+            elif predictions[0].status == "available":
+                stored = predictions[0]
+                prediction = AvailableDashboardPrediction(
+                    status="available", probability=stored.probability,
+                    prediction_cutoff=stored.prediction_cutoff,
+                    generated_at=stored.generated_at, warnings=stored.warnings,
+                )
+            else:
+                stored = predictions[0]
+                prediction = UnavailableDashboardPrediction(
+                    status="unavailable", prediction_cutoff=stored.prediction_cutoff,
+                    generated_at=stored.generated_at, reasons=stored.reasons,
+                    warnings=stored.warnings,
+                )
+            rows.append(DashboardPatient(patient=patient, current_rule=current_rule, prediction=prediction))
+        return sorted(rows, key=_dashboard_sort_key)
 
     def get_patient(self, patient_id: str, event_limit: int = 100) -> PatientDetail | None:
         """Read one active owned root and its independent EHR and IoT streams."""
@@ -489,6 +566,12 @@ class PatientRepository:
 
 def _cohort_path(cohort_id: str) -> str:
     return f"{COHORTS_COLLECTION}/{cohort_id}"
+
+
+def _dashboard_sort_key(row: DashboardPatient) -> tuple[int, float, str, str]:
+    if row.prediction.status == "available":
+        return (0, -row.prediction.probability, row.patient.display_name.casefold(), row.patient.patient_id)
+    return (1, 0.0, row.patient.display_name.casefold(), row.patient.patient_id)
 
 
 def _patient_path(cohort_id: str, patient_id: str) -> str:

@@ -7,7 +7,7 @@ from pydantic import BaseModel, ConfigDict, field_validator
 
 from .auth import require_doctor
 from .clinical_rules import ClinicalRuleResult
-from .patients import PatientDetail, PatientRepository, PatientSummary
+from .patients import DashboardPatient, PatientDetail, PatientRepository, PatientSummary
 from .prediction_service import AkiPredictionResult, ClinicalResultEnvelope, PredictionService
 from .settings import get_settings
 
@@ -47,6 +47,16 @@ def list_patients(
     limit: Annotated[int, Query(ge=1, le=100)] = 100,
 ) -> list[PatientSummary]:
     return repository.list_patients(limit)
+
+
+@router.get("/dashboard/patients", response_model=list[DashboardPatient])
+def list_dashboard_patients(
+    _claims: Annotated[dict[str, Any], Depends(require_doctor)],
+    repository: Annotated[PatientRepository, Depends(get_patient_repository)],
+    limit: Annotated[int, Query(ge=1, le=100)] = 100,
+) -> list[DashboardPatient]:
+    """Return stored dashboard evidence without prediction-generation side effects."""
+    return repository.list_dashboard_patients(limit)
 
 
 @router.get("/patients/{patient_id}", response_model=PatientDetail)
