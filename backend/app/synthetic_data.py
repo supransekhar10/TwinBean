@@ -312,6 +312,59 @@ def generate_cohort(
                 _validate_record(observation)
                 iot_observations.append(observation)
 
+        # `time_basis` remains the inclusive upper record bound.  The explicit
+        # cutoff is one day earlier, so a terminal creatinine at `basis` is an
+        # ordinary post-cutoff observation rather than an embedded outcome.
+        terminal_cutoff = basis - timedelta(hours=24)
+        terminal_baseline = {
+            "G3a": 1.35,
+            "G3b": 1.85,
+            "G4": 2.75,
+        }[stage] + ((seed + index) % 5) * 0.01
+        worsening_trajectory = index % 2 == 1
+        for terminal_index, days_from_cutoff in enumerate(range(-7, 2)):
+            event_time = terminal_cutoff + timedelta(days=days_from_cutoff)
+            value = terminal_baseline
+            if days_from_cutoff == 1:
+                value += 0.30 if worsening_trajectory else 0.05
+            event = EhrEvent(
+                event_id=_stable_id(
+                    "ehr", version, seed, patient_id, "terminal-creatinine", terminal_index
+                ),
+                patient_id=patient_id,
+                event_type="laboratory",
+                event_time=event_time,
+                data=_frozen_data(
+                    {"test_name": "creatinine", "value": round(value, 2), "unit": "mg/dL"}
+                ),
+                synthetic=True,
+                generator_version=version,
+                seed=seed,
+                source="twinbean-synthetic-ehr",
+            )
+            _validate_record(event)
+            ehr_events.append(event)
+
+        terminal_blood_pressure = IotObservation(
+            observation_id=_stable_id("iot", version, seed, patient_id, "terminal-blood-pressure"),
+            patient_id=patient_id,
+            measurement_type="blood_pressure",
+            observed_at=terminal_cutoff,
+            data=_frozen_data(
+                {
+                    "systolic": 118 + ((seed + index * 7) % 31),
+                    "diastolic": 72 + ((seed + index * 3) % 13),
+                    "unit": "mmHg",
+                }
+            ),
+            synthetic=True,
+            generator_version=version,
+            seed=seed,
+            source="twinbean-simulated-iot",
+        )
+        _validate_record(terminal_blood_pressure)
+        iot_observations.append(terminal_blood_pressure)
+
     identifiers = [
         *(patient.patient_id for patient in patients),
         *(event.event_id for event in ehr_events),

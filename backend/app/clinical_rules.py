@@ -48,11 +48,13 @@ def calculate_creatinine_rule(
     auditable without implying a complete AKI assessment.
     """
     cutoff = _require_utc(prediction_cutoff)
-    evidence = sorted(
-        (_creatinine_evidence(event) for event in ehr_history if event.event_time <= cutoff),
-        key=lambda item: item.observed_at,
-    )
-    evidence = [item for item in evidence if item is not None]
+    evidence = [
+        item
+        for event in ehr_history
+        if event.event_time <= cutoff
+        if (item := _creatinine_evidence(event)) is not None
+    ]
+    evidence.sort(key=lambda item: item.observed_at)
     if not evidence:
         return ClinicalRuleResult(
             status="insufficient_creatinine_history",
