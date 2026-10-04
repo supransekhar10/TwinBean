@@ -52,3 +52,24 @@ def test_evaluator_runs_all_critical_scenarios_and_writes_a_non_empty_manifest(t
     assert manifest["critical_failures"] == []
     assert manifest["rubric_counts"]
     assert manifest["output_digest"]
+
+MANIFEST_VERIFIER_SPEC = importlib.util.find_spec("scripts.verify_eval_manifest")
+
+
+def test_manifest_verifier_module_is_available() -> None:
+    assert MANIFEST_VERIFIER_SPEC is not None
+
+
+@pytest.mark.skipif(MANIFEST_VERIFIER_SPEC is None, reason="verifier is introduced by this plan")
+def test_manifest_verifier_rejects_tampering_and_unmanifested_claims(tmp_path: Path) -> None:
+    evaluator = importlib.import_module("scripts.evaluate_phase3_contract")
+    verifier = importlib.import_module("scripts.verify_eval_manifest")
+    output = tmp_path / "phase3-contract.json"
+    evaluator.evaluate_contract(REFERENCE_PATH, output, fail_on_rubric=True)
+    assert verifier.verify_manifest(output) is True
+
+    payload = json.loads(output.read_text(encoding="utf-8"))
+    payload["output_digest"] = "0" * 64
+    output.write_text(json.dumps(payload), encoding="utf-8")
+    with pytest.raises(ValueError, match="digest"):
+        verifier.verify_manifest(output)
