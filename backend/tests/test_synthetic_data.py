@@ -6,6 +6,7 @@ from datetime import UTC, datetime, timedelta
 import pytest
 
 from app.synthetic_data import EhrEvent, IotObservation, generate_cohort
+from app.clinical_rules import calculate_creatinine_rule
 
 
 TIME_BASIS = datetime(2026, 1, 15, 12, 0, tzinfo=UTC)
@@ -113,3 +114,47 @@ def test_generated_ids_are_unique_and_input_contract_is_bounded() -> None:
         generate_cohort(1, "", TIME_BASIS)
     with pytest.raises(ValueError, match="UTC"):
         generate_cohort(1, "2026.1", datetime(2026, 1, 15, 12, 0))
+
+
+def test_terminal_observations_are_deterministic_and_cutoff_safe() -> None:
+    cohort = generate_cohort(53, "2026.2", TIME_BASIS, patient_count=4)
+    cutoff = TIME_BASIS - timedelta(hours=24)
+
+    terminal_events = [
+        event
+        for event in cohort.ehr_events
+        if event.event_type == "laboratory"
+        and event.data.get("test_name") == "creatinine"
+        and cutoff - timedelta(days=7) <= event.event_time <= cutoff + timedelta(hours=24)
+    ]
+    terminal_blood_pressures = [
+        observation
+        for observation in cohort.iot_observations
+        if observation.measurement_type == "blood_pressure" and observation.observed_at == cutoff
+    ]
+
+    assert len(terminal_events) == len(cohort.patients) * 9
+    assert len(terminal_blood_pressures) == len(cohort.patients)
+    assert all(event.event_time <= TIME_BASIS for event in terminal_events)
+    assert all(observation.data["unit"] == "mmHg" for observation in terminal_blood_pressures)
+    assert _serialized_cohort(53) == _serialized_cohort(53)
+
+
+def test_terminal_trajectories_derive_both_label_classes_without_persisted_labels() -> None:
+    cohort = generate_cohort(59, "2026.2", TIME_BASIS, patient_count=6)
+    cutoff = TIME_BASIS - timedelta(hours=24)
+    statuses_at_cutoff = {}
+    statuses_after_cutoff = {}
+
+    for patient in cohort.patients:
+        history = [event for event in cohort.ehr_events if event.patient_id == patient.patient_id]
+        statuses_at_cutoff[patient.patient_id] = calculate_creatinine_rule(history, cutoff).status
+        statuses_after_cutoff[patient.patient_id] = calculate_creatinine_rule(history, TIME_BASIS).status
+
+    assert set(statuses_at_cutoff.values()) == {"criteria_not_met"}
+    assert "criteria_met" in statuses_after_cutoff.values()
+    assert "criteria_not_met" in statuses_after_cutoff.values()
+    for event in cohort.ehr_events:
+        assert "outcome" not in event.data
+        assert "label" not in event.data
+        assert "scenario" not in event.data
