@@ -28,19 +28,25 @@
     }
   },
   "clinical_validated": false,
-  "code_revision": "6fe9bd5a82925937967a76c25371e9ad5717d608",
+  "code_revision": "ba0e0d9764b45b0af586582e16f4c95e78843b50",
   "command": "python -m scripts.evaluate_phase3_contract",
   "critical_failures": [],
   "cutoff_version": "utc-cutoff-v1",
   "feature_schema_version": "aki-combined-2026.10.04",
   "format_version": 1,
   "freshness_policy_version": "required-observation-24h-2026.10.04",
-  "generated_at_utc": "2026-10-04T18:14:57.853593+00:00",
+  "generated_at_utc": "2026-10-04T19:13:01.120093+00:00",
   "label_version": "new-aki-24h-2026.10.04",
   "limitations": [
     "Synthetic safety-contract scenarios only; not a held-out performance, calibration, prevalence, or clinical-validation report."
   ],
-  "output_digest": "a3e9a199e5217a567154fbb4438208aa855eb11c5e02a30a865c72f2bb2984cb",
+  "not_evaluated_rubrics": [
+    "D-05",
+    "D-08",
+    "D-11",
+    "D-12"
+  ],
+  "output_digest": "d94f960cfd2576abbfd171454bb21c9990e2d2ad85eaa9fbfb25794833acf854",
   "partition_digests": {
     "development_group_digest": "b9a841fcca14ee7f8131290829a25c99f2cac4e6bb2b1d8cda7afa3165a507bf",
     "held_out_group_digest": "1c6ff27161bf447f7f1e7a7ad84a7e3cda7c13918d958fe47a69b899caaba900",
@@ -203,9 +209,7 @@
       "category": "valid_forecast",
       "name": "v1",
       "passed": true,
-      "rubrics": [
-        "D-05"
-      ]
+      "rubrics": []
     },
     {
       "actual": {
@@ -214,9 +218,7 @@
       "category": "valid_forecast",
       "name": "v2",
       "passed": true,
-      "rubrics": [
-        "D-04"
-      ]
+      "rubrics": []
     },
     {
       "actual": {
@@ -225,9 +227,7 @@
       "category": "valid_forecast",
       "name": "v3",
       "passed": true,
-      "rubrics": [
-        "D-05"
-      ]
+      "rubrics": []
     },
     {
       "actual": {
@@ -247,9 +247,7 @@
       "category": "valid_forecast",
       "name": "v5",
       "passed": true,
-      "rubrics": [
-        "D-10"
-      ]
+      "rubrics": []
     },
     {
       "actual": {
@@ -258,9 +256,7 @@
       "category": "valid_forecast",
       "name": "v6",
       "passed": true,
-      "rubrics": [
-        "D-12"
-      ]
+      "rubrics": []
     },
     {
       "actual": {
@@ -366,10 +362,7 @@
       "category": "unavailable_or_adversarial",
       "name": "u9",
       "passed": true,
-      "rubrics": [
-        "D-08",
-        "D-09"
-      ]
+      "rubrics": []
     },
     {
       "actual": {
@@ -413,11 +406,7 @@
       "category": "end_to_end_integrity",
       "name": "i3",
       "passed": true,
-      "rubrics": [
-        "D-11",
-        "D-12",
-        "D-16"
-      ]
+      "rubrics": []
     }
   ],
   "rubric_counts": {
@@ -434,12 +423,12 @@
       "passed": 2
     },
     "D-04": {
-      "cases": 3,
-      "passed": 3
-    },
-    "D-05": {
       "cases": 2,
       "passed": 2
+    },
+    "D-05": {
+      "cases": 0,
+      "passed": 0
     },
     "D-06": {
       "cases": 3,
@@ -450,24 +439,24 @@
       "passed": 1
     },
     "D-08": {
-      "cases": 1,
-      "passed": 1
+      "cases": 0,
+      "passed": 0
     },
     "D-09": {
-      "cases": 2,
-      "passed": 2
-    },
-    "D-10": {
-      "cases": 2,
-      "passed": 2
-    },
-    "D-11": {
       "cases": 1,
       "passed": 1
     },
+    "D-10": {
+      "cases": 1,
+      "passed": 1
+    },
+    "D-11": {
+      "cases": 0,
+      "passed": 0
+    },
     "D-12": {
-      "cases": 2,
-      "passed": 2
+      "cases": 0,
+      "passed": 0
     },
     "D-13": {
       "cases": 1,
@@ -482,8 +471,8 @@
       "passed": 1
     },
     "D-16": {
-      "cases": 2,
-      "passed": 2
+      "cases": 1,
+      "passed": 1
     }
   },
   "scenario_counts": {

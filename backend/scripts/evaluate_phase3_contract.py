@@ -48,9 +48,10 @@ def snapshot_for(strategy: str):
     return build_prediction_snapshot(current,cutoff)
 def run_forecast(item: dict) -> dict:
     first=VerifiedPredictionEngine().predict(context(),CUTOFF); second=VerifiedPredictionEngine().predict(context(),CUTOFF) if item.get("strategy")=="reproducible" else first
-    passed=first.status=="available" and bool(getattr(first,"attributions",()))
+    actual={"status":first.status}
+    passed=actual==item["expected"] and bool(getattr(first,"attributions",()))
     if item.get("strategy")=="reproducible": passed=passed and first.probability==second.probability
-    return {"actual":{"status":first.status},"passed":passed}
+    return {"actual":actual,"passed":passed}
 def run_unavailable(item: dict) -> dict:
     strategy=item["strategy"]
     if strategy=="artifact_failure":
@@ -65,6 +66,16 @@ def run_unavailable(item: dict) -> dict:
     else: result=snapshot_for(strategy)
     actual={"status":result.status,"reason":getattr(result,"reason",None) or getattr(result,"reasons",[None])[0]}
     return {"actual":actual,"passed":actual==item["expected"]}
+def direct_rubrics(category: str, scenario: Mapping[str, object]) -> list[str]:
+    """Return only rubrics directly exercised by this evaluator runner."""
+    if category == "valid_forecast":
+        return ["D-09"] if scenario.get("strategy") == "reproducible" else []
+    if category == "unavailable_or_adversarial" and scenario.get("strategy") == "artifact_failure":
+        return []
+    if category == "end_to_end_integrity" and scenario.get("strategy") == "separation":
+        return []
+    return list(scenario["rubrics"])
+
 def run_integrity(item: dict) -> dict:
     strategy=item["strategy"]
     if strategy=="authorization":
@@ -86,12 +97,12 @@ def evaluate_contract(reference: Path, output: Path, *, fail_on_rubric: bool=Fal
     data=json.loads(reference.read_text(encoding="utf-8")); categories=data["scenario_categories"]; legacy={x["name"]:x for x in data["scenarios"]}; results=[]
     runners={"rule":lambda x:run_rule(x,legacy),"valid_forecast":run_forecast,"unavailable_or_adversarial":run_unavailable,"end_to_end_integrity":run_integrity}
     for category,scenarios in categories.items():
-        for scenario in scenarios: results.append({"name":scenario["name"],"category":category,"rubrics":scenario["rubrics"],**runners[category](scenario)})
+        for scenario in scenarios: results.append({"name":scenario["name"],"category":category,"rubrics":direct_rubrics(category,scenario),**runners[category](scenario)})
     failures=[{"name":x["name"],"actual":x["actual"]} for x in results if not x["passed"]]; rubrics={f"D-{n:02d}":{"cases":0,"passed":0} for n in range(1,17)}
     for result in results:
         for rubric in result["rubrics"]: rubrics[rubric]["cases"]+=1; rubrics[rubric]["passed"]+=int(result["passed"])
     artifact=json.loads((ROOT/"backend/model_artifacts/aki-24h-2026.10.04/manifest.json").read_text(encoding="utf-8"))
-    manifest={"format_version":1,"command":"python -m scripts.evaluate_phase3_contract","generated_at_utc":datetime.now(UTC).isoformat(),"code_revision":revision(),"reference_sha256":digest(data),"synthetic_research_only":True,"clinical_validated":False,"limitations":["Synthetic safety-contract scenarios only; not a held-out performance, calibration, prevalence, or clinical-validation report."],"artifact":{"model_version":artifact["model_version"],"members":artifact["members"],"schema":artifact["feature_schema"],"package_versions":package_versions()},"cutoff_version":"utc-cutoff-v1","label_version":LABEL_VERSION,"feature_schema_version":FEATURE_SCHEMA.version,"freshness_policy_version":FRESHNESS_POLICY.version,"scenario_counts":{**{k:len(v) for k,v in categories.items()},"total":len(results)},"rubric_counts":rubrics,"critical_failures":failures,"results":results,"seeds":sorted({x["synthetic_provenance"]["seed"] for v in categories.values() for x in v}),"partition_digests":artifact["partition"]}
+    manifest={"format_version":1,"command":"python -m scripts.evaluate_phase3_contract","generated_at_utc":datetime.now(UTC).isoformat(),"code_revision":revision(),"reference_sha256":digest(data),"synthetic_research_only":True,"clinical_validated":False,"limitations":["Synthetic safety-contract scenarios only; not a held-out performance, calibration, prevalence, or clinical-validation report."],"artifact":{"model_version":artifact["model_version"],"members":artifact["members"],"schema":artifact["feature_schema"],"package_versions":package_versions()},"cutoff_version":"utc-cutoff-v1","label_version":LABEL_VERSION,"feature_schema_version":FEATURE_SCHEMA.version,"freshness_policy_version":FRESHNESS_POLICY.version,"scenario_counts":{**{k:len(v) for k,v in categories.items()},"total":len(results)},"rubric_counts":rubrics,"not_evaluated_rubrics":[name for name, count in rubrics.items() if count["cases"] == 0],"critical_failures":failures,"results":results,"seeds":sorted({x["synthetic_provenance"]["seed"] for v in categories.values() for x in v}),"partition_digests":artifact["partition"]}
     manifest["output_digest"]=digest(manifest); output.parent.mkdir(parents=True,exist_ok=True); output.write_text(json.dumps(manifest,indent=2,sort_keys=True)+"\n",encoding="utf-8")
     if fail_on_rubric and failures: raise RuntimeError(f"{len(failures)} critical scenarios failed")
     return manifest

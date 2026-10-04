@@ -53,6 +53,30 @@ def test_evaluator_runs_all_critical_scenarios_and_writes_a_non_empty_manifest(t
     assert manifest["rubric_counts"]
     assert manifest["output_digest"]
 
+
+def test_evaluator_omits_rubrics_that_its_runner_does_not_exercise(tmp_path: Path) -> None:
+    evaluator = importlib.import_module("scripts.evaluate_phase3_contract")
+    manifest = evaluator.evaluate_contract(REFERENCE_PATH, tmp_path / "phase3-contract.json", fail_on_rubric=True)
+    by_name = {result["name"]: result for result in manifest["results"]}
+
+    assert by_name["v1"]["rubrics"] == []
+    assert by_name["v4"]["rubrics"] == ["D-09"]
+    assert by_name["u9"]["rubrics"] == []
+    assert by_name["i3"]["rubrics"] == []
+    assert {"D-05", "D-08", "D-11", "D-12"} <= set(manifest["not_evaluated_rubrics"])
+
+
+def test_evaluator_compares_valid_forecast_output_to_its_fixture_expectation(tmp_path: Path) -> None:
+    evaluator = importlib.import_module("scripts.evaluate_phase3_contract")
+    reference = _reference()
+    reference["scenario_categories"]["valid_forecast"][0]["expected"] = {"status": "unavailable"}
+    altered = tmp_path / "altered-reference.json"
+    altered.write_text(json.dumps(reference), encoding="utf-8")
+
+    with pytest.raises(RuntimeError, match="critical scenarios failed"):
+        evaluator.evaluate_contract(altered, tmp_path / "phase3-contract.json", fail_on_rubric=True)
+
+
 MANIFEST_VERIFIER_SPEC = importlib.util.find_spec("scripts.verify_eval_manifest")
 
 
