@@ -28,19 +28,19 @@
     }
   },
   "clinical_validated": false,
-  "code_revision": "b5fb3553f7dfb48f6ee58dae973e42acc1ed29fd",
+  "code_revision": "6fe9bd5a82925937967a76c25371e9ad5717d608",
   "command": "python -m scripts.evaluate_phase3_contract",
   "critical_failures": [],
   "cutoff_version": "utc-cutoff-v1",
   "feature_schema_version": "aki-combined-2026.10.04",
   "format_version": 1,
   "freshness_policy_version": "required-observation-24h-2026.10.04",
-  "generated_at_utc": "2026-10-04T18:13:57.035460+00:00",
+  "generated_at_utc": "2026-10-04T18:14:57.853593+00:00",
   "label_version": "new-aki-24h-2026.10.04",
   "limitations": [
     "Synthetic safety-contract scenarios only; not a held-out performance, calibration, prevalence, or clinical-validation report."
   ],
-  "output_digest": "99c74c9cb4cc786bab70967442d0e11e02b5f261d104bd7444d0a8dd31f0a27b",
+  "output_digest": "a3e9a199e5217a567154fbb4438208aa855eb11c5e02a30a865c72f2bb2984cb",
   "partition_digests": {
     "development_group_digest": "b9a841fcca14ee7f8131290829a25c99f2cac4e6bb2b1d8cda7afa3165a507bf",
     "held_out_group_digest": "1c6ff27161bf447f7f1e7a7ad84a7e3cda7c13918d958fe47a69b899caaba900",
