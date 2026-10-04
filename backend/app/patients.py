@@ -180,16 +180,18 @@ class PatientRepository:
         patient_path = _patient_path(context.cohort_id, patient_id)
         rule_path = f"{patient_path}/clinical_rules/{result_id}"
         prediction_path = f"{patient_path}/aki_predictions/{result_id}"
-        existing_rule = self._client.document(rule_path).get().to_dict()
-        existing_prediction = self._client.document(prediction_path).get().to_dict()
+        rule_reference = self._client.document(rule_path)
+        prediction_reference = self._client.document(prediction_path)
+        transaction = self._client.transaction()
+        existing_rule = transaction.get(rule_reference).to_dict()
+        existing_prediction = transaction.get(prediction_reference).to_dict()
         if existing_rule is not None or existing_prediction is not None:
             if existing_rule == rule_document and existing_prediction == prediction_document:
                 return result_id
             raise ValueError("clinical result attempt conflicts with immutable prior evidence")
-        batch = self._client.batch()
-        batch.set(self._client.document(rule_path), rule_document)
-        batch.set(self._client.document(prediction_path), prediction_document)
-        batch.commit()
+        transaction.set(rule_reference, rule_document)
+        transaction.set(prediction_reference, prediction_document)
+        transaction.commit()
         return result_id
 
     def get_existing_clinical_results(

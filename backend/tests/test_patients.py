@@ -89,8 +89,13 @@ class Batch:
 
 
 class Transaction(Batch):
+    def get(self, document: Document) -> Snapshot:
+        return document.get()
+
     def commit(self) -> None:
         self.client.transaction_commits += 1
+        if self.client.fail_transaction == self.client.transaction_commits:
+            raise RuntimeError("simulated transaction failure")
         if self.client.fail_activation:
             raise RuntimeError("simulated activation failure")
         for path, payload in self.set_calls:
@@ -103,6 +108,7 @@ class MemoryFirestore:
         self.batch_commits = 0
         self.transaction_commits = 0
         self.fail_batch: int | None = None
+        self.fail_transaction: int | None = None
         self.fail_activation = False
         self.corrupt_after_stage = False
 
@@ -284,9 +290,10 @@ def test_clinical_results_use_one_deterministic_id_in_separate_owned_paths() -> 
     assert set(client.documents[prediction_path]) & {"evidence", "scope", "limitation", "rule_version"} == set()
     assert client.documents[prediction_path]["status"] == "unavailable"
     assert _active(client) == pointer_before
+    assert client.transaction_commits == 2
 
 
-def test_failed_clinical_result_batch_leaves_all_existing_documents_unchanged() -> None:
+def test_failed_clinical_result_transaction_leaves_all_existing_documents_unchanged() -> None:
     client = MemoryFirestore()
     repository = PatientRepository(client)
     repository.write_cohort(_cohort(22))
@@ -296,9 +303,9 @@ def test_failed_clinical_result_batch_leaves_all_existing_documents_unchanged() 
     assert context is not None
     client.documents["unrelated/canary"] = {"value": "untouched"}
     before = {path: dict(payload) for path, payload in client.documents.items()}
-    client.fail_batch = client.batch_commits + 1
+    client.fail_transaction = client.transaction_commits + 1
 
-    with pytest.raises(RuntimeError, match="batch"):
+    with pytest.raises(RuntimeError, match="transaction"):
         repository.write_clinical_results(
             context, _unavailable_envelope(datetime(2026, 1, 15, 12, 0, tzinfo=UTC))
         )

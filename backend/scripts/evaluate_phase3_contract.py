@@ -85,7 +85,7 @@ def run_integrity(item: dict) -> dict:
             except HTTPException as error: status="rejected" if error.status_code==403 else "wrong_status"
         finally: auth.verify_firebase_token=original
     elif strategy=="atomicity":
-        status="preserved" if subprocess.run([sys.executable,"-m","pytest","backend/tests/test_patients.py::test_failed_clinical_result_batch_leaves_all_existing_documents_unchanged","-q"],cwd=ROOT,capture_output=True).returncode==0 else "failed"
+        status="preserved" if subprocess.run([sys.executable,"-m","pytest","backend/tests/test_patients.py::test_failed_clinical_result_transaction_leaves_all_existing_documents_unchanged","-q"],cwd=ROOT,capture_output=True).returncode==0 else "failed"
     else:
         try: validate_aki_prediction_result({"status":"unavailable","outcome":"new_aki_within_24h","prediction_cutoff":CUTOFF,"generated_at":CUTOFF,"reasons":["missing"],"evidence":[]}); status="accepted"
         except Exception: status="rejected"
