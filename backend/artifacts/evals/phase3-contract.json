@@ -1,0 +1,526 @@
+{
+  "artifact": {
+    "members": {
+      "feature-schema.json": "b0d51afc235e74bcc371e7e67433494f97140322eaf38fa3004e56e6867bc196",
+      "pipeline.joblib": "fa06a5e5599368ba1cf9edcd1dad101feaa2db299e8628d73c5c72ad2c27d7fb"
+    },
+    "model_version": "aki-24h-2026.10.04",
+    "package_versions": {
+      "pandas": "3.0.6",
+      "scikit-learn": "1.9.1",
+      "shap": "0.52.0",
+      "xgboost": "3.4.1"
+    },
+    "schema": {
+      "raw_feature_columns": [
+        "age_years",
+        "latest_creatinine_mg_dl",
+        "creatinine_delta_48h_mg_dl",
+        "latest_systolic_bp_mmhg"
+      ],
+      "schema_version": "aki-combined-2026.10.04",
+      "units": {
+        "age_years": "years",
+        "creatinine_delta_48h_mg_dl": "mg/dL",
+        "latest_creatinine_mg_dl": "mg/dL",
+        "latest_systolic_bp_mmhg": "mmHg"
+      }
+    }
+  },
+  "clinical_validated": false,
+  "code_revision": "b5fb3553f7dfb48f6ee58dae973e42acc1ed29fd",
+  "command": "python -m scripts.evaluate_phase3_contract",
+  "critical_failures": [],
+  "cutoff_version": "utc-cutoff-v1",
+  "feature_schema_version": "aki-combined-2026.10.04",
+  "format_version": 1,
+  "freshness_policy_version": "required-observation-24h-2026.10.04",
+  "generated_at_utc": "2026-10-04T18:13:57.035460+00:00",
+  "label_version": "new-aki-24h-2026.10.04",
+  "limitations": [
+    "Synthetic safety-contract scenarios only; not a held-out performance, calibration, prevalence, or clinical-validation report."
+  ],
+  "output_digest": "99c74c9cb4cc786bab70967442d0e11e02b5f261d104bd7444d0a8dd31f0a27b",
+  "partition_digests": {
+    "development_group_digest": "b9a841fcca14ee7f8131290829a25c99f2cac4e6bb2b1d8cda7afa3165a507bf",
+    "held_out_group_digest": "1c6ff27161bf447f7f1e7a7ad84a7e3cda7c13918d958fe47a69b899caaba900",
+    "held_out_patient_count": 3,
+    "train_group_digest": "4552dd803227486d07ce93e5c125bc704f4684489910d84e05c916e708ca0472"
+  },
+  "reference_sha256": "9d273adc90107d53b4ff00e223a9ba116530b9b6916cc665e99001f0c68b64b7",
+  "results": [
+    {
+      "actual": {
+        "criteria_evaluated": [
+          "serum_creatinine_rise_0_3_mg_dl_within_48h",
+          "serum_creatinine_ratio_1_5_within_7d"
+        ],
+        "criteria_met": [],
+        "evidence_event_ids": [
+          "abs-low-baseline",
+          "abs-low-current"
+        ],
+        "status": "criteria_not_met"
+      },
+      "category": "rule",
+      "name": "r1",
+      "passed": true,
+      "rubrics": [
+        "D-01"
+      ]
+    },
+    {
+      "actual": {
+        "criteria_evaluated": [
+          "serum_creatinine_rise_0_3_mg_dl_within_48h",
+          "serum_creatinine_ratio_1_5_within_7d"
+        ],
+        "criteria_met": [
+          "serum_creatinine_rise_0_3_mg_dl_within_48h"
+        ],
+        "evidence_event_ids": [
+          "abs-edge-baseline",
+          "abs-edge-current"
+        ],
+        "status": "criteria_met"
+      },
+      "category": "rule",
+      "name": "r2",
+      "passed": true,
+      "rubrics": [
+        "D-01"
+      ]
+    },
+    {
+      "actual": {
+        "criteria_evaluated": [
+          "serum_creatinine_ratio_1_5_within_7d"
+        ],
+        "criteria_met": [],
+        "evidence_event_ids": [
+          "abs-outside-baseline",
+          "abs-outside-current"
+        ],
+        "status": "criteria_not_met"
+      },
+      "category": "rule",
+      "name": "r3",
+      "passed": true,
+      "rubrics": [
+        "D-01"
+      ]
+    },
+    {
+      "actual": {
+        "criteria_evaluated": [
+          "serum_creatinine_ratio_1_5_within_7d"
+        ],
+        "criteria_met": [],
+        "evidence_event_ids": [
+          "ratio-low-baseline",
+          "ratio-low-current"
+        ],
+        "status": "criteria_not_met"
+      },
+      "category": "rule",
+      "name": "r4",
+      "passed": true,
+      "rubrics": [
+        "D-01"
+      ]
+    },
+    {
+      "actual": {
+        "criteria_evaluated": [
+          "serum_creatinine_ratio_1_5_within_7d"
+        ],
+        "criteria_met": [
+          "serum_creatinine_ratio_1_5_within_7d"
+        ],
+        "evidence_event_ids": [
+          "ratio-edge-baseline",
+          "ratio-edge-current"
+        ],
+        "status": "criteria_met"
+      },
+      "category": "rule",
+      "name": "r5",
+      "passed": true,
+      "rubrics": [
+        "D-01"
+      ]
+    },
+    {
+      "actual": {
+        "criteria_evaluated": [],
+        "criteria_met": [],
+        "evidence_event_ids": [
+          "ratio-outside-current"
+        ],
+        "status": "insufficient_creatinine_history"
+      },
+      "category": "rule",
+      "name": "r6",
+      "passed": true,
+      "rubrics": [
+        "D-01"
+      ]
+    },
+    {
+      "actual": {
+        "criteria_evaluated": [],
+        "criteria_met": [],
+        "evidence_event_ids": [],
+        "status": "insufficient_creatinine_history"
+      },
+      "category": "rule",
+      "name": "r7",
+      "passed": true,
+      "rubrics": [
+        "D-02"
+      ]
+    },
+    {
+      "actual": {
+        "criteria_evaluated": [],
+        "criteria_met": [],
+        "evidence_event_ids": [
+          "single-current"
+        ],
+        "status": "insufficient_creatinine_history"
+      },
+      "category": "rule",
+      "name": "r8",
+      "passed": true,
+      "rubrics": [
+        "D-16"
+      ]
+    },
+    {
+      "actual": {
+        "status": "available"
+      },
+      "category": "valid_forecast",
+      "name": "v1",
+      "passed": true,
+      "rubrics": [
+        "D-05"
+      ]
+    },
+    {
+      "actual": {
+        "status": "available"
+      },
+      "category": "valid_forecast",
+      "name": "v2",
+      "passed": true,
+      "rubrics": [
+        "D-04"
+      ]
+    },
+    {
+      "actual": {
+        "status": "available"
+      },
+      "category": "valid_forecast",
+      "name": "v3",
+      "passed": true,
+      "rubrics": [
+        "D-05"
+      ]
+    },
+    {
+      "actual": {
+        "status": "available"
+      },
+      "category": "valid_forecast",
+      "name": "v4",
+      "passed": true,
+      "rubrics": [
+        "D-09"
+      ]
+    },
+    {
+      "actual": {
+        "status": "available"
+      },
+      "category": "valid_forecast",
+      "name": "v5",
+      "passed": true,
+      "rubrics": [
+        "D-10"
+      ]
+    },
+    {
+      "actual": {
+        "status": "available"
+      },
+      "category": "valid_forecast",
+      "name": "v6",
+      "passed": true,
+      "rubrics": [
+        "D-12"
+      ]
+    },
+    {
+      "actual": {
+        "reason": "invalid_cutoff",
+        "status": "unavailable"
+      },
+      "category": "unavailable_or_adversarial",
+      "name": "u1",
+      "passed": true,
+      "rubrics": [
+        "D-03"
+      ]
+    },
+    {
+      "actual": {
+        "reason": "missing_creatinine_history",
+        "status": "unavailable"
+      },
+      "category": "unavailable_or_adversarial",
+      "name": "u2",
+      "passed": true,
+      "rubrics": [
+        "D-03"
+      ]
+    },
+    {
+      "actual": {
+        "reason": "missing_creatinine_comparator",
+        "status": "unavailable"
+      },
+      "category": "unavailable_or_adversarial",
+      "name": "u3",
+      "passed": true,
+      "rubrics": [
+        "D-04"
+      ]
+    },
+    {
+      "actual": {
+        "reason": "stale_ehr_observation",
+        "status": "unavailable"
+      },
+      "category": "unavailable_or_adversarial",
+      "name": "u4",
+      "passed": true,
+      "rubrics": [
+        "D-06"
+      ]
+    },
+    {
+      "actual": {
+        "reason": "stale_iot_observation",
+        "status": "unavailable"
+      },
+      "category": "unavailable_or_adversarial",
+      "name": "u5",
+      "passed": true,
+      "rubrics": [
+        "D-06"
+      ]
+    },
+    {
+      "actual": {
+        "reason": "future_observation",
+        "status": "unavailable"
+      },
+      "category": "unavailable_or_adversarial",
+      "name": "u6",
+      "passed": true,
+      "rubrics": [
+        "D-04"
+      ]
+    },
+    {
+      "actual": {
+        "reason": "forbidden_ehr_field",
+        "status": "unavailable"
+      },
+      "category": "unavailable_or_adversarial",
+      "name": "u7",
+      "passed": true,
+      "rubrics": [
+        "D-07"
+      ]
+    },
+    {
+      "actual": {
+        "reason": "invalid_iot_unit",
+        "status": "unavailable"
+      },
+      "category": "unavailable_or_adversarial",
+      "name": "u8",
+      "passed": true,
+      "rubrics": [
+        "D-06"
+      ]
+    },
+    {
+      "actual": {
+        "reason": "model_artifact_or_inference_unavailable",
+        "status": "unavailable"
+      },
+      "category": "unavailable_or_adversarial",
+      "name": "u9",
+      "passed": true,
+      "rubrics": [
+        "D-08",
+        "D-09"
+      ]
+    },
+    {
+      "actual": {
+        "reason": "shap_explanation_unavailable",
+        "status": "unavailable"
+      },
+      "category": "unavailable_or_adversarial",
+      "name": "u10",
+      "passed": true,
+      "rubrics": [
+        "D-10"
+      ]
+    },
+    {
+      "actual": {
+        "status": "rejected"
+      },
+      "category": "end_to_end_integrity",
+      "name": "i1",
+      "passed": true,
+      "rubrics": [
+        "D-13"
+      ]
+    },
+    {
+      "actual": {
+        "status": "preserved"
+      },
+      "category": "end_to_end_integrity",
+      "name": "i2",
+      "passed": true,
+      "rubrics": [
+        "D-14",
+        "D-15"
+      ]
+    },
+    {
+      "actual": {
+        "status": "rejected"
+      },
+      "category": "end_to_end_integrity",
+      "name": "i3",
+      "passed": true,
+      "rubrics": [
+        "D-11",
+        "D-12",
+        "D-16"
+      ]
+    }
+  ],
+  "rubric_counts": {
+    "D-01": {
+      "cases": 6,
+      "passed": 6
+    },
+    "D-02": {
+      "cases": 1,
+      "passed": 1
+    },
+    "D-03": {
+      "cases": 2,
+      "passed": 2
+    },
+    "D-04": {
+      "cases": 3,
+      "passed": 3
+    },
+    "D-05": {
+      "cases": 2,
+      "passed": 2
+    },
+    "D-06": {
+      "cases": 3,
+      "passed": 3
+    },
+    "D-07": {
+      "cases": 1,
+      "passed": 1
+    },
+    "D-08": {
+      "cases": 1,
+      "passed": 1
+    },
+    "D-09": {
+      "cases": 2,
+      "passed": 2
+    },
+    "D-10": {
+      "cases": 2,
+      "passed": 2
+    },
+    "D-11": {
+      "cases": 1,
+      "passed": 1
+    },
+    "D-12": {
+      "cases": 2,
+      "passed": 2
+    },
+    "D-13": {
+      "cases": 1,
+      "passed": 1
+    },
+    "D-14": {
+      "cases": 1,
+      "passed": 1
+    },
+    "D-15": {
+      "cases": 1,
+      "passed": 1
+    },
+    "D-16": {
+      "cases": 2,
+      "passed": 2
+    }
+  },
+  "scenario_counts": {
+    "end_to_end_integrity": 3,
+    "rule": 8,
+    "total": 27,
+    "unavailable_or_adversarial": 10,
+    "valid_forecast": 6
+  },
+  "seeds": [
+    3101,
+    3102,
+    3103,
+    3104,
+    3105,
+    3106,
+    3107,
+    3108,
+    3201,
+    3202,
+    3203,
+    3204,
+    3205,
+    3206,
+    3301,
+    3302,
+    3303,
+    3304,
+    3305,
+    3306,
+    3307,
+    3308,
+    3309,
+    3310,
+    3401,
+    3402,
+    3403
+  ],
+  "synthetic_research_only": true
+}
