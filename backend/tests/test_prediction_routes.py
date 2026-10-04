@@ -235,6 +235,10 @@ def test_verified_engine_returns_a_complete_released_bundle_forecast() -> None:
     assert result.probability is not None
     assert result.attributions
     assert result.prediction_cutoff == CUTOFF
+    assert all(item.semantics == "model influence in raw-margin/log-odds space; not causal" for item in result.attributions)
+    assert all(item.expected_value == result.attributions[0].expected_value for item in result.attributions)
+    assert all(item.expected_value == item.expected_value for item in result.attributions)
+    assert all(item.expected_value is not None for item in result.attributions)
 
 
 def test_doctor_can_read_separate_bounded_rule_and_prediction_histories(

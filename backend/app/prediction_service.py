@@ -8,7 +8,7 @@ from typing import Annotated, Literal, Protocol
 
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter
 
-from .aki_explanations import ExplanationIntegrityError, explain_prediction
+from .aki_explanations import NON_CAUSAL_SEMANTICS, ExplanationIntegrityError, explain_prediction
 from .aki_features import FEATURE_SCHEMA, FRESHNESS_POLICY, build_prediction_snapshot
 from .aki_model import ArtifactIntegrityError, load_verified_bundle, predict_probability
 from .clinical_rules import ClinicalRuleResult, calculate_creatinine_rule
@@ -21,6 +21,8 @@ class ShapAttribution(BaseModel):
 
     feature: str = Field(min_length=1)
     value: float
+    expected_value: float
+    semantics: Literal["model influence in raw-margin/log-odds space; not causal"] = NON_CAUSAL_SEMANTICS
     shap_margin: float
 
 
@@ -112,6 +114,8 @@ class VerifiedPredictionEngine:
                 ShapAttribution(
                     feature=item.feature,
                     value=item.value,
+                    expected_value=item.expected_value,
+                    semantics=item.semantics,
                     shap_margin=item.shap_margin,
                 )
                 for item in explanation
