@@ -1,0 +1,15 @@
+{
+  "raw_feature_columns": [
+    "age_years",
+    "latest_creatinine_mg_dl",
+    "creatinine_delta_48h_mg_dl",
+    "latest_systolic_bp_mmhg"
+  ],
+  "schema_version": "aki-combined-2026.10.04",
+  "units": {
+    "age_years": "years",
+    "creatinine_delta_48h_mg_dl": "mg/dL",
+    "latest_creatinine_mg_dl": "mg/dL",
+    "latest_systolic_bp_mmhg": "mmHg"
+  }
+}

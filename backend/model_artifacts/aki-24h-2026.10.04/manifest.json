@@ -1,0 +1,62 @@
+{
+  "clinical_validated": false,
+  "code_revision": "17a511fc817965c02c3598113ea7155f1388bacd",
+  "cohort": {
+    "generator_version": "aki-release-generator-2026.10.04",
+    "patient_count": 12,
+    "seed": 20261004,
+    "snapshot_sha256": "eb3f9b5476ef68b7be320661972998282a86947c14d6d823b4d09f954269403c",
+    "time_basis": "2026-10-04T00:00:00Z"
+  },
+  "explanation": {
+    "additivity_abs_tol": 1e-06,
+    "model_output": "raw",
+    "semantics": "model_influence_not_causal"
+  },
+  "feature_schema": {
+    "raw_feature_columns": [
+      "age_years",
+      "latest_creatinine_mg_dl",
+      "creatinine_delta_48h_mg_dl",
+      "latest_systolic_bp_mmhg"
+    ],
+    "schema_version": "aki-combined-2026.10.04",
+    "units": {
+      "age_years": "years",
+      "creatinine_delta_48h_mg_dl": "mg/dL",
+      "latest_creatinine_mg_dl": "mg/dL",
+      "latest_systolic_bp_mmhg": "mmHg"
+    }
+  },
+  "format_version": 1,
+  "freshness_policy": {
+    "maximum_age_hours": 24,
+    "version": "required-observation-24h-2026.10.04"
+  },
+  "label_version": "new-aki-24h-2026.10.04",
+  "members": {
+    "feature-schema.json": "b0d51afc235e74bcc371e7e67433494f97140322eaf38fa3004e56e6867bc196",
+    "pipeline.joblib": "fa06a5e5599368ba1cf9edcd1dad101feaa2db299e8628d73c5c72ad2c27d7fb"
+  },
+  "model_version": "aki-24h-2026.10.04",
+  "package_versions": {
+    "pandas": "3.0.6",
+    "scikit-learn": "1.9.1",
+    "shap": "0.52.0",
+    "xgboost": "3.4.1"
+  },
+  "partition": {
+    "development_group_digest": "b9a841fcca14ee7f8131290829a25c99f2cac4e6bb2b1d8cda7afa3165a507bf",
+    "held_out_group_digest": "1c6ff27161bf447f7f1e7a7ad84a7e3cda7c13918d958fe47a69b899caaba900",
+    "held_out_patient_count": 3,
+    "train_group_digest": "4552dd803227486d07ce93e5c125bc704f4684489910d84e05c916e708ca0472"
+  },
+  "python_version": "3.12.10",
+  "synthetic_research_use": true,
+  "transformed_feature_columns": [
+    "age_years",
+    "latest_creatinine_mg_dl",
+    "creatinine_delta_48h_mg_dl",
+    "latest_systolic_bp_mmhg"
+  ]
+}

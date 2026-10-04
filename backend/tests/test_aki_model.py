@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import replace
 import json
 from datetime import UTC, datetime
 from pathlib import Path
@@ -164,5 +165,37 @@ def test_explanation_integrity_failure_is_typed_and_never_returns_attributions(r
             return [[float("nan")] * len(values.columns)]
 
     monkeypatch.setattr(aki_explanations.shap, "TreeExplainer", NonFiniteExplainer)
+    with pytest.raises(aki_explanations.ExplanationIntegrityError):
+        aki_explanations.explain_prediction(bundle, frame)
+
+
+def test_explanation_rejects_name_mismatch_additivity_failure_and_shap_exception(release_dir: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from app.aki_model import load_verified_bundle
+
+    bundle = load_verified_bundle(release_dir, artifact_root=release_dir.parent)
+    frame = pd.DataFrame([[61.0, 1.4, 0.1, 130.0]], columns=list(FEATURE_SCHEMA.columns))
+    mismatched = replace(bundle, manifest={**bundle.manifest, "transformed_feature_columns": ["wrong"]})
+    with pytest.raises(aki_explanations.ExplanationIntegrityError):
+        aki_explanations.explain_prediction(mismatched, frame)
+
+    class AdditivityFailureExplainer:
+        expected_value = 0.0
+
+        def __init__(self, *_: object, **__: object) -> None:
+            pass
+
+        def shap_values(self, values: pd.DataFrame, *, check_additivity: bool) -> list[list[float]]:
+            assert check_additivity is True
+            return [[0.0] * len(values.columns)]
+
+    monkeypatch.setattr(aki_explanations.shap, "TreeExplainer", AdditivityFailureExplainer)
+    with pytest.raises(aki_explanations.ExplanationIntegrityError):
+        aki_explanations.explain_prediction(bundle, frame)
+
+    class RaisingExplainer:
+        def __init__(self, *_: object, **__: object) -> None:
+            raise RuntimeError("simulated SHAP failure")
+
+    monkeypatch.setattr(aki_explanations.shap, "TreeExplainer", RaisingExplainer)
     with pytest.raises(aki_explanations.ExplanationIntegrityError):
         aki_explanations.explain_prediction(bundle, frame)
