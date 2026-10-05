@@ -11,10 +11,11 @@ export default function Home() {
         <span className="prototype-label">Research prototype / synthetic data only</span>
       </header>
 
+      <a className="skip-link" href="#patient-list-heading">Skip to patient list</a>
       <div className="content-grid" id="main-content">
         <section className="intro-copy" aria-labelledby="page-title">
           <p className="context-label">Kidney digital twin</p>
-          <h1 id="page-title">A secure starting point for simulated kidney review.</h1>
+          <h1 id="page-title">Monitor simulated kidney risk with evidence kept separate.</h1>
           <p className="lede">
             TwinBean will help doctors review synthetic CKD history, simulated IoT trends,
             current clinical rules, and future AKI risk without merging those signals.
@@ -37,7 +38,7 @@ export default function Home() {
       </div>
 
       <footer className="page-footer">
-        <span>Foundation milestone</span>
+        <span>Doctor dashboard</span>
         <span>Not for clinical use</span>
       </footer>
     </main>

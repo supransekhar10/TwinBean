@@ -8,7 +8,8 @@ import {
 } from "@firebase/auth";
 import { FormEvent, useEffect, useState } from "react";
 
-import { fetchDoctorHealth, type DoctorHealth } from "@/lib/api";
+import { DoctorDashboard } from "@/components/doctor-dashboard";
+import { ApiError, fetchDoctorDashboard, fetchDoctorHealth, type DashboardPatient, type DoctorHealth } from "@/lib/api";
 import { firebaseAuth } from "@/lib/firebase";
 
 type RequestState = "idle" | "working" | "success" | "error";
@@ -38,12 +39,16 @@ export function AuthPanel() {
   const [requestState, setRequestState] = useState<RequestState>("idle");
   const [message, setMessage] = useState("");
   const [health, setHealth] = useState<DoctorHealth | null>(null);
+  const [dashboard, setDashboard] = useState<DashboardPatient[]>([]);
+  const [dashboardState, setDashboardState] = useState<"idle" | "loading" | "ready" | "error" | "unauthorized">("idle");
 
   useEffect(
     () => onAuthStateChanged(firebaseAuth, (nextUser) => {
       setUser(nextUser);
       setAuthReady(true);
       setHealth(null);
+      setDashboard([]);
+      setDashboardState("idle");
       setMessage("");
       setRequestState("idle");
     }),
@@ -72,10 +77,25 @@ export function AuthPanel() {
     try {
       const token = await user.getIdToken(forceRefresh);
       setHealth(await fetchDoctorHealth(token));
+      setDashboardState("loading");
+      setDashboard(await fetchDoctorDashboard(token));
+      setDashboardState("ready");
       setRequestState("success");
     } catch (error) {
       setMessage(friendlyAccessError(error));
       setRequestState("error");
+      setDashboardState(error instanceof ApiError && (error.status === 401 || error.status === 403) ? "unauthorized" : "error");
+    }
+  }
+
+  async function retryDashboard() {
+    if (!user) return;
+    setDashboardState("loading");
+    try {
+      setDashboard(await fetchDoctorDashboard(await user.getIdToken()));
+      setDashboardState("ready");
+    } catch (error) {
+      setDashboardState(error instanceof ApiError && (error.status === 401 || error.status === 403) ? "unauthorized" : "error");
     }
   }
 
@@ -85,7 +105,8 @@ export function AuthPanel() {
 
   if (user) {
     return (
-      <section aria-labelledby="access-heading" className="auth-panel">
+      <div className="doctor-workspace">
+      <section aria-labelledby="access-heading" className="auth-panel auth-panel--compact">
         <div className="panel-heading">
           <div>
             <p className="context-label">Authenticated account</p>
@@ -139,6 +160,15 @@ export function AuthPanel() {
           </button>
         </div>
       </section>
+      {dashboardState !== "idle" && (
+        <DoctorDashboard
+          rows={dashboard}
+          loading={dashboardState === "loading"}
+          error={dashboardState === "error" ? "general" : dashboardState === "unauthorized" ? "unauthorized" : undefined}
+          onRetry={retryDashboard}
+        />
+      )}
+      </div>
     );
   }
 
