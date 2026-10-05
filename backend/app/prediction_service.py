@@ -8,13 +8,12 @@ from typing import Annotated, Literal, Protocol
 
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter
 
-from .aki_explanations import NON_CAUSAL_SEMANTICS, ExplanationIntegrityError, explain_prediction
-from .aki_features import FEATURE_SCHEMA, FRESHNESS_POLICY, build_prediction_snapshot
-from .aki_model import ArtifactIntegrityError, load_verified_bundle, predict_probability
 from .clinical_rules import ClinicalRuleResult, calculate_creatinine_rule
 from .patients import ClinicalContext, PatientRepository
 from .settings import Settings, get_settings
 
+
+NON_CAUSAL_SEMANTICS = "model influence in raw-margin/log-odds space; not causal"
 
 class ShapAttribution(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -85,13 +84,21 @@ class VerifiedPredictionEngine:
         self._artifact_dir: Path = configured.aki_model_artifact_dir
 
     def predict(self, context: ClinicalContext, prediction_cutoff: datetime) -> AkiPredictionResult:
-        snapshot = build_prediction_snapshot(context, prediction_cutoff)
-        if snapshot.status != "available" or snapshot.frame is None:
-            return self._unavailable(prediction_cutoff, snapshot.reason or "invalid_prediction_input")
-
         try:
+            # Heavy native ML libraries are loaded only for an explicit inference
+            # request. Stored-patient reads and authentication must remain usable
+            # on hosts where application-control policy blocks those DLLs.
+            from .aki_explanations import ExplanationIntegrityError, explain_prediction
+            from .aki_features import FEATURE_SCHEMA, FRESHNESS_POLICY, build_prediction_snapshot
+            from .aki_model import ArtifactIntegrityError, load_verified_bundle, predict_probability
+
+            snapshot = build_prediction_snapshot(context, prediction_cutoff)
+            if snapshot.status != "available" or snapshot.frame is None:
+                return self._unavailable(prediction_cutoff, snapshot.reason or "invalid_prediction_input")
             bundle = load_verified_bundle(self._artifact_dir)
             probability = predict_probability(bundle, snapshot.frame)
+        except (ImportError, OSError):
+            return self._unavailable(prediction_cutoff, "model_engine_unavailable")
         except ArtifactIntegrityError:
             return self._unavailable(prediction_cutoff, "model_artifact_or_inference_unavailable")
 
