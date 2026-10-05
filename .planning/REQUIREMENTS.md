@@ -40,11 +40,11 @@
 
 ### Patient Detail
 
-- [ ] **PAT-01**: Doctor can open a patient detail page from the dashboard.
-- [ ] **PAT-02**: Patient detail presents synthetic longitudinal history separately from simulated IoT trends.
-- [ ] **PAT-03**: Patient detail presents current clinical rule status separately from future model predictions.
-- [ ] **PAT-04**: Patient detail presents prediction time and missing or stale data warnings.
-- [ ] **PAT-05**: Patient detail presents SHAP explanations in a section separate from the prediction score.
+- [x] **PAT-01**: Doctor can open a patient detail page from the dashboard.
+- [x] **PAT-02**: Patient detail presents synthetic longitudinal history separately from simulated IoT trends.
+- [x] **PAT-03**: Patient detail presents current clinical rule status separately from future model predictions.
+- [x] **PAT-04**: Patient detail presents prediction time and missing or stale data warnings.
+- [x] **PAT-05**: Patient detail presents SHAP explanations in a section separate from the prediction score.
 
 ### Synthetic Data and Prediction
 
@@ -116,11 +116,11 @@
 | DASH-03 | Phase 4 | Complete |
 | DASH-04 | Phase 4 | Complete |
 | DASH-05 | Phase 4 | Complete |
-| PAT-01 | Phase 5 | Pending |
-| PAT-02 | Phase 5 | Pending |
-| PAT-03 | Phase 5 | Pending |
-| PAT-04 | Phase 5 | Pending |
-| PAT-05 | Phase 5 | Pending |
+| PAT-01 | Phase 5 | Complete |
+| PAT-02 | Phase 5 | Complete |
+| PAT-03 | Phase 5 | Complete |
+| PAT-04 | Phase 5 | Complete |
+| PAT-05 | Phase 5 | Complete |
 | DATA-01 | Phase 2 | Complete |
 | DATA-02 | Phase 2 | Complete |
 | DATA-03 | Phase 2 | Complete |

@@ -21,7 +21,7 @@ TwinBean advances through six vertical phases: establish a secure runnable appli
 - [x] **Phase 2: Synthetic Kidney Data and Firestore** - Persist separate synthetic EHR and IoT streams behind doctor-only access. (completed 2026-10-04)
 - [x] **Phase 3: Clinical Rules and AKI Prediction** - Produce distinct clinical-rule and 24-hour AKI prediction results with safe unavailable states. (completed 2026-10-05)
 - [x] **Phase 4: Risk-Ranked Doctor Dashboard** - Let doctors review every monitored patient with valid risks prioritized safely. (completed 2026-10-05)
-- [ ] **Phase 5: Patient Digital Twin Detail** - Present history, trends, rules, predictions, warnings, and explanations in distinct sections.
+- [x] **Phase 5: Patient Digital Twin Detail** - Present history, trends, rules, predictions, warnings, and explanations in distinct sections. (completed 2026-10-05)
 - [ ] **Phase 6: Leakage-Resistant Model Evaluation** - Report actual patient-level, time-safe EHR-only and combined-stream evaluation results.
 
 ## Phase Details
@@ -139,5 +139,5 @@ Plans:
 | 2. Synthetic Kidney Data and Firestore | 4/4 | Complete    | 2026-10-04 |
 | 3. Clinical Rules and AKI Prediction | 6/6 | Complete    | 2026-10-05 |
 | 4. Risk-Ranked Doctor Dashboard | 2/2 | Complete    | 2026-10-05 |
-| 5. Patient Digital Twin Detail | 0/TBD | Not started | - |
+| 5. Patient Digital Twin Detail | 1/1 | Complete    | 2026-10-05 |
 | 6. Leakage-Resistant Model Evaluation | 0/TBD | Not started | - |
