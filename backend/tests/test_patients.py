@@ -74,6 +74,11 @@ class Batch:
     def set(self, document: Document, payload: dict[str, object]) -> None:
         self.set_calls.append((document.path, dict(payload)))
 
+    def create(self, document: Document, payload: dict[str, object]) -> None:
+        if document.path in self.client.documents:
+            raise RuntimeError("simulated document already exists")
+        self.set(document, payload)
+
     def commit(self) -> None:
         self.client.batch_commits += 1
         if self.client.fail_batch == self.client.batch_commits:
@@ -89,8 +94,6 @@ class Batch:
 
 
 class Transaction(Batch):
-    def get(self, document: Document) -> Snapshot:
-        return document.get()
 
     def commit(self) -> None:
         self.client.transaction_commits += 1
@@ -269,6 +272,7 @@ def test_clinical_results_use_one_deterministic_id_in_separate_owned_paths() -> 
     assert context is not None
     cutoff = datetime(2026, 1, 15, 12, 0, tzinfo=UTC)
     pointer_before = dict(_active(client))
+    batch_commits_before = client.batch_commits
 
     first = repository.write_clinical_results(context, _unavailable_envelope(cutoff))
     second = repository.write_clinical_results(context, _unavailable_envelope(cutoff))
@@ -290,7 +294,7 @@ def test_clinical_results_use_one_deterministic_id_in_separate_owned_paths() -> 
     assert set(client.documents[prediction_path]) & {"evidence", "scope", "limitation", "rule_version"} == set()
     assert client.documents[prediction_path]["status"] == "unavailable"
     assert _active(client) == pointer_before
-    assert client.transaction_commits == 2
+    assert client.batch_commits == batch_commits_before + 1
 
 
 def test_failed_clinical_result_transaction_leaves_all_existing_documents_unchanged() -> None:
@@ -303,9 +307,9 @@ def test_failed_clinical_result_transaction_leaves_all_existing_documents_unchan
     assert context is not None
     client.documents["unrelated/canary"] = {"value": "untouched"}
     before = {path: dict(payload) for path, payload in client.documents.items()}
-    client.fail_transaction = client.transaction_commits + 1
+    client.fail_batch = client.batch_commits + 1
 
-    with pytest.raises(RuntimeError, match="transaction"):
+    with pytest.raises(RuntimeError, match="batch"):
         repository.write_clinical_results(
             context, _unavailable_envelope(datetime(2026, 1, 15, 12, 0, tzinfo=UTC))
         )
