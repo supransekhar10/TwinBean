@@ -13,18 +13,10 @@ const featureLabels: Record<string, string> = { age_years: "Age", latest_creatin
 const ruleLabels = { criteria_met: "Criteria met", criteria_not_met: "Criteria not met", insufficient_creatinine_history: "Insufficient creatinine history" };
 
 function formatTime(value: string) { return new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short", timeZone: "UTC" }).format(new Date(value)) + " UTC"; }
-function latestWarning(prediction: AkiPrediction | null) {
-  if (!prediction) return "No stored prediction is available.";
-  const code = prediction.warnings[0] ?? (prediction.status === "unavailable" ? prediction.reasons[0] : null);
-  const known: Record<string, string> = { stale_ehr_observation: "EHR data is stale.", stale_iot_observation: "Simulated IoT data is stale.", missing_iot_observation: "Simulated IoT data is missing.", no_stored_prediction: "No stored prediction is available.", local_snapshot_fallback: "Local synthetic fallback; refresh Firestore when available." };
-  return code ? known[code] ?? "Prediction data needs review." : null;
-}
-
 export function PatientDetailView({ data }: { data: TwinData }) {
   const creatinine = data.detail.ehr_history.filter((event) => event.event_type === "laboratory" && event.data.test_name === "creatinine").map((event) => ({ time: formatTime(event.event_time), value: Number(event.data.value) }));
   const egfr = data.detail.ehr_history.filter((event) => event.event_type === "laboratory" && event.data.test_name === "egfr").map((event) => ({ time: formatTime(event.event_time), value: Number(event.data.value) }));
   const bloodPressure = data.detail.iot_observations.filter((item) => item.measurement_type === "blood_pressure").map((item) => ({ time: formatTime(item.observed_at), value: Number(item.data.systolic) }));
-  const warning = latestWarning(data.prediction);
   const attributions = data.prediction?.status === "available" ? [...data.prediction.attributions].sort((a, b) => Math.abs(b.shap_margin) - Math.abs(a.shap_margin)) : [];
   const maxInfluence = Math.max(...attributions.map((item) => Math.abs(item.shap_margin)), 0);
   return <main className="detail-shell">
@@ -35,7 +27,7 @@ export function PatientDetailView({ data }: { data: TwinData }) {
     <section className="evidence-section" aria-labelledby="iot-heading"><h2 id="iot-heading">Simulated medical-IoT trends</h2><p>Wearable and home-monitoring observations, maintained as a separate time-series stream.</p><div className="chart-frame" aria-label="Systolic blood pressure trend chart"><ResponsiveContainer width="100%" height={240}><LineChart data={bloodPressure}><CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="time" hide /><YAxis unit=" mmHg" /><Tooltip /><Line type="monotone" dataKey="value" stroke="#376e9a" strokeWidth={2} dot={false} /></LineChart></ResponsiveContainer></div></section>
     <div className="clinical-grid">
       <section className="evidence-section rule-detail" aria-labelledby="rule-heading"><p className="context-label">Observed state</p><h2 id="rule-heading">Current clinical rule</h2><strong>{data.rule ? ruleLabels[data.rule.status] : "Insufficient creatinine history"}</strong><p>{data.rule?.limitation ?? "No stored rule evidence is available."}</p></section>
-      <section className="evidence-section prediction-detail" aria-labelledby="prediction-heading"><p className="context-label">Future model output</p><h2 id="prediction-heading">24-hour AKI prediction</h2><strong>{data.prediction?.status === "available" ? `${Math.round(data.prediction.probability * 100)}%` : "Risk unavailable"}</strong><p>Prediction generated: {data.prediction?.generated_at ? formatTime(data.prediction.generated_at) : "Not available"}</p>{warning && <p className="quality-warning"><span className="data-label">Data quality warning</span>{warning}</p>}</section>
+      <section className="evidence-section prediction-detail" aria-labelledby="prediction-heading"><p className="context-label">Future model output</p><h2 id="prediction-heading">24-hour AKI prediction</h2><strong>{data.prediction?.status === "available" ? `${Math.round(data.prediction.probability * 100)}%` : "Risk unavailable"}</strong><p>Prediction generated: {data.prediction?.generated_at ? formatTime(data.prediction.generated_at) : "Not available"}</p></section>
     </div>
     <section className="evidence-section" aria-labelledby="shap-heading"><p className="context-label">Explanation / not causal</p><h2 id="shap-heading">SHAP feature influence</h2>{attributions.length ? <ol className="shap-list">{attributions.map((item) => <li key={item.feature}><div><strong>{featureLabels[item.feature] ?? item.feature}</strong><span>Input value: {item.value.toLocaleString()}</span></div><div className="shap-measure"><span className={item.shap_margin >= 0 ? "shap-bar shap-bar--higher" : "shap-bar shap-bar--lower"} style={{ width: `${maxInfluence ? Math.max(3, Math.abs(item.shap_margin) / maxInfluence * 100) : 3}%` }} /><strong>{item.shap_margin >= 0 ? "+" : ""}{item.shap_margin.toFixed(5)}</strong></div></li>)}</ol> : <p>Explanation unavailable because there is no valid prediction.</p>} {maxInfluence > 0 && maxInfluence < 0.0005 && <p className="quality-clear">All measured feature influences are very small for this model output. They are shown with five-decimal precision rather than rounded to zero.</p>}<p>Positive values push this model output toward higher predicted risk; negative values push it lower. SHAP does not establish causation or treatment guidance.</p></section>
   </main>;
