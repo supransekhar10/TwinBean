@@ -25,7 +25,7 @@ export function DashboardScreen() {
       setState("ready");
     } catch (error) {
       setState(
-        error instanceof ApiError && error.status === 503
+        error instanceof ApiError && (error.status === 503 || error.status === 504)
           ? "unavailable"
           : error instanceof ApiError && (error.status === 401 || error.status === 403)
             ? "unauthorized"

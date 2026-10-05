@@ -34,7 +34,7 @@ export function DoctorDashboard({ rows, loading = false, error, onRetry }: Dashb
     const content = error === "unauthorized"
       ? ["Doctor access is required", "Sign out and sign in with an approved doctor account, then refresh the role token."]
       : error === "unavailable"
-        ? ["Patient data is temporarily unavailable", "The Firestore quota is exhausted. Your doctor access is still valid; retry after the quota resets."]
+        ? ["Patient data is temporarily unavailable", "Firestore could not complete the request. Your doctor access is still valid; retry shortly."]
         : ["Patient dashboard could not be loaded", "Check the backend connection and retry."];
     return <section className="dashboard-state" role="alert"><h2>{content[0]}</h2><p>{content[1]}</p>{onRetry && <button className="secondary-button" onClick={onRetry} type="button">Retry dashboard</button>}</section>;
   }

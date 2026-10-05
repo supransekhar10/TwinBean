@@ -27,7 +27,7 @@ describe("DoctorDashboard", () => {
   it("distinguishes temporary patient-data unavailability from authorization failure", () => {
     const html = renderToStaticMarkup(<DoctorDashboard rows={[]} error="unavailable" />);
     expect(html).toContain("Patient data is temporarily unavailable");
-    expect(html).toContain("Firestore quota");
+    expect(html).toContain("Firestore could not complete the request");
     expect(html).not.toContain("Doctor access is required");
   });
 });

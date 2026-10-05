@@ -189,6 +189,6 @@ def test_dashboard_reports_firestore_quota_as_temporarily_unavailable(
 
     assert response.status_code == 503
     assert response.json() == {
-        "detail": "Patient data is temporarily unavailable because the Firestore quota is exhausted. Please retry later."
+        "detail": "Patient data is temporarily unavailable because Firestore could not complete the request. Please retry shortly."
     }
     assert response.headers["retry-after"] == "300"

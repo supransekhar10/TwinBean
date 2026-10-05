@@ -69,7 +69,7 @@ class FakeCollection:
         self.limit_value = value
         return self
 
-    def stream(self) -> list[FakeSnapshot]:
+    def stream(self, **_kwargs: object) -> list[FakeSnapshot]:
         prefix = f"{self.path}/"
         depth = self.path.count("/") + 1
         documents = [(path, data) for path, data in self.client.documents.items() if path.startswith(prefix) and path.count("/") == depth]
@@ -84,7 +84,7 @@ class FakeDocument:
         self.client = client
         self.path = path
 
-    def get(self) -> FakeSnapshot:
+    def get(self, **_kwargs: object) -> FakeSnapshot:
         return FakeSnapshot(self.client.documents.get(self.path), self.path.rsplit("/", maxsplit=1)[-1])
 
     def collection(self, name: str) -> FakeCollection:

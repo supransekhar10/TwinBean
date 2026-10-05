@@ -25,6 +25,10 @@ MAX_WRITES_PER_BATCH = 100
 MAX_BATCH_BYTES = 8 * 1024 * 1024
 MAX_DOCUMENT_BYTES = 900 * 1024
 DASHBOARD_CACHE_TTL_SECONDS = 300.0
+FIRESTORE_READ_TIMEOUT_SECONDS = 3.0
+# Interactive reads fail fast. The UI owns retry so SDK-level retries cannot
+# leave clinicians staring at an indefinite loading state.
+_FIRESTORE_READ_RETRY = None
 COHORTS_COLLECTION = "twinbean_cohorts"
 ACTIVE_COHORT_PATH = "twinbean_metadata/active_cohort"
 _PATIENT_ID = re.compile(r"^tbp-[0-9a-f]{32}$")
@@ -153,7 +157,7 @@ class PatientRepository:
             .collection("patients")
             .order_by("patient_id")
             .limit(bounded_limit)
-            .stream()
+            .stream(retry=_FIRESTORE_READ_RETRY, timeout=FIRESTORE_READ_TIMEOUT_SECONDS)
         )
         return [self._summary_from_data(snapshot.to_dict() or {}, active) for snapshot in snapshots]
 
@@ -272,7 +276,9 @@ class PatientRepository:
             raise ValueError("clinical context no longer belongs to the active immutable cohort")
         patient_id = context.patient.patient.patient_id
         owned_root = (
-            self._cohort_document(active.cohort_id).collection("patients").document(patient_id).get().to_dict()
+            self._cohort_document(active.cohort_id).collection("patients").document(patient_id)
+            .get(retry=_FIRESTORE_READ_RETRY, timeout=FIRESTORE_READ_TIMEOUT_SECONDS)
+            .to_dict()
         )
         if owned_root is None or self._summary_from_data(owned_root, active).patient_id != patient_id:
             raise ValueError("clinical context patient no longer belongs to the active immutable cohort")
@@ -292,8 +298,8 @@ class PatientRepository:
         prediction_path = f"{patient_path}/aki_predictions/{result_id}"
         rule_reference = self._client.document(rule_path)
         prediction_reference = self._client.document(prediction_path)
-        existing_rule = rule_reference.get().to_dict()
-        existing_prediction = prediction_reference.get().to_dict()
+        existing_rule = rule_reference.get(retry=_FIRESTORE_READ_RETRY, timeout=FIRESTORE_READ_TIMEOUT_SECONDS).to_dict()
+        existing_prediction = prediction_reference.get(retry=_FIRESTORE_READ_RETRY, timeout=FIRESTORE_READ_TIMEOUT_SECONDS).to_dict()
         if existing_rule is not None or existing_prediction is not None:
             if existing_rule == rule_document and existing_prediction == prediction_document:
                 return result_id
@@ -319,12 +325,12 @@ class PatientRepository:
         patient_path = _patient_path(context.cohort_id, patient_id)
         rule_data = (
             self._client.document(f"{patient_path}/clinical_rules/{result_id}")
-            .get()
+            .get(retry=_FIRESTORE_READ_RETRY, timeout=FIRESTORE_READ_TIMEOUT_SECONDS)
             .to_dict()
         )
         prediction_data = (
             self._client.document(f"{patient_path}/aki_predictions/{result_id}")
-            .get()
+            .get(retry=_FIRESTORE_READ_RETRY, timeout=FIRESTORE_READ_TIMEOUT_SECONDS)
             .to_dict()
         )
         if rule_data is None and prediction_data is None:
@@ -411,7 +417,7 @@ class PatientRepository:
             patient_document.collection(collection)
             .order_by(order_field, direction="DESCENDING")
             .limit(bounded_limit)
-            .stream()
+            .stream(retry=_FIRESTORE_READ_RETRY, timeout=FIRESTORE_READ_TIMEOUT_SECONDS)
         )
         return [
             _clinical_result_response_payload(snapshot.to_dict() or {}, active, patient_id, result_type)
@@ -422,13 +428,17 @@ class PatientRepository:
         self, active: _ActiveCohort, patient_id: str, event_limit: int
     ) -> PatientDetail | None:
         document = self._cohort_document(active.cohort_id).collection("patients").document(patient_id)
-        root_data = document.get().to_dict()
+        root_data = document.get(retry=_FIRESTORE_READ_RETRY, timeout=FIRESTORE_READ_TIMEOUT_SECONDS).to_dict()
         if root_data is None:
             return None
         patient = self._summary_from_data(root_data, active)
         bounded_limit = min(max(event_limit, 1), MAX_HISTORY_RECORDS)
-        ehr_events = document.collection("ehr_events").order_by("event_time").limit(bounded_limit).stream()
-        iot_observations = document.collection("iot_observations").order_by("observed_at").limit(bounded_limit).stream()
+        ehr_events = document.collection("ehr_events").order_by("event_time").limit(bounded_limit).stream(
+            retry=_FIRESTORE_READ_RETRY, timeout=FIRESTORE_READ_TIMEOUT_SECONDS
+        )
+        iot_observations = document.collection("iot_observations").order_by("observed_at").limit(bounded_limit).stream(
+            retry=_FIRESTORE_READ_RETRY, timeout=FIRESTORE_READ_TIMEOUT_SECONDS
+        )
         ehr_history = sorted(
             (self._ehr_event_from_data(snapshot.to_dict() or {}, active, patient_id) for snapshot in ehr_events),
             key=lambda event: event.event_time,
@@ -489,7 +499,9 @@ class PatientRepository:
         transaction.commit()
 
     def _load_active_cohort(self) -> _ActiveCohort | None:
-        pointer = self._client.document(ACTIVE_COHORT_PATH).get().to_dict()
+        pointer = self._client.document(ACTIVE_COHORT_PATH).get(
+            retry=_FIRESTORE_READ_RETRY, timeout=FIRESTORE_READ_TIMEOUT_SECONDS
+        ).to_dict()
         if pointer is None:
             return None
         active = _active_from_data(pointer)
@@ -501,12 +513,16 @@ class PatientRepository:
     def _validate_staged_cohort(self, cohort_id: str) -> _ActiveCohort:
         if not _COHORT_ID.fullmatch(cohort_id):
             raise ValueError("cohort identifier is not a TwinBean immutable version")
-        descriptor = self._cohort_document(cohort_id).get().to_dict()
+        descriptor = self._cohort_document(cohort_id).get(
+            retry=_FIRESTORE_READ_RETRY, timeout=FIRESTORE_READ_TIMEOUT_SECONDS
+        ).to_dict()
         active = _active_from_data(descriptor or {})
         if active.cohort_id != cohort_id:
             raise ValueError("staged cohort descriptor ownership does not match its path")
         manifest: list[tuple[str, dict[str, object]]] = []
-        patient_snapshots = self._cohort_document(cohort_id).collection("patients").stream()
+        patient_snapshots = self._cohort_document(cohort_id).collection("patients").stream(
+            retry=_FIRESTORE_READ_RETRY, timeout=FIRESTORE_READ_TIMEOUT_SECONDS
+        )
         patient_count = ehr_count = iot_count = 0
         for root_snapshot in patient_snapshots:
             root_data = root_snapshot.to_dict() or {}
@@ -516,13 +532,17 @@ class PatientRepository:
             root_path = _patient_path(cohort_id, patient.patient_id)
             manifest.append((root_path, dict(root_data)))
             document = self._client.document(root_path)
-            for snapshot in document.collection("ehr_events").stream():
+            for snapshot in document.collection("ehr_events").stream(
+                retry=_FIRESTORE_READ_RETRY, timeout=FIRESTORE_READ_TIMEOUT_SECONDS
+            ):
                 data = snapshot.to_dict() or {}
                 event = self._ehr_event_from_data(data, active, patient.patient_id)
                 _require_snapshot_id(snapshot, event.event_id)
                 ehr_count += 1
                 manifest.append((f"{root_path}/ehr_events/{event.event_id}", dict(data)))
-            for snapshot in document.collection("iot_observations").stream():
+            for snapshot in document.collection("iot_observations").stream(
+                retry=_FIRESTORE_READ_RETRY, timeout=FIRESTORE_READ_TIMEOUT_SECONDS
+            ):
                 data = snapshot.to_dict() or {}
                 observation = self._iot_observation_from_data(data, active, patient.patient_id)
                 _require_snapshot_id(snapshot, observation.observation_id)

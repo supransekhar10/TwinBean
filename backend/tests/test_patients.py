@@ -28,7 +28,7 @@ class Document:
     def __init__(self, client: "MemoryFirestore", path: str) -> None:
         self.client, self.path = client, path
 
-    def get(self) -> Snapshot:
+    def get(self, **_kwargs: object) -> Snapshot:
         return Snapshot(self.client.documents.get(self.path), self.path.rsplit("/", maxsplit=1)[-1])
 
     def collection(self, name: str) -> "Collection":
@@ -54,7 +54,7 @@ class Collection:
         self.limit_value = value
         return self
 
-    def stream(self) -> list[Snapshot]:
+    def stream(self, **_kwargs: object) -> list[Snapshot]:
         prefix = f"{self.path}/"
         depth = self.path.count("/") + 1
         records = [(path, data) for path, data in self.client.documents.items() if path.startswith(prefix) and path.count("/") == depth]

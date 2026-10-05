@@ -3,7 +3,7 @@ from typing import Any
 from fastapi import Depends, FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from google.api_core.exceptions import ResourceExhausted
+from google.api_core.exceptions import DeadlineExceeded, ResourceExhausted, ServiceUnavailable
 
 from .auth import require_doctor
 from .patient_routes import router as patient_router
@@ -22,14 +22,16 @@ app.include_router(patient_router)
 
 
 @app.exception_handler(ResourceExhausted)
-def firestore_quota_exhausted(_request: Request, _error: ResourceExhausted) -> JSONResponse:
+@app.exception_handler(DeadlineExceeded)
+@app.exception_handler(ServiceUnavailable)
+def firestore_temporarily_unavailable(_request: Request, _error: Exception) -> JSONResponse:
     """Expose a safe, retryable response without leaking datastore details."""
     return JSONResponse(
         status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
         content={
             "detail": (
-                "Patient data is temporarily unavailable because the Firestore quota is exhausted. "
-                "Please retry later."
+                "Patient data is temporarily unavailable because Firestore could not complete the request. "
+                "Please retry shortly."
             )
         },
         headers={"Retry-After": "300"},

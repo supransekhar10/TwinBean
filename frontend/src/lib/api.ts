@@ -47,11 +47,28 @@ export class ApiError extends Error {
 }
 
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
+const requestTimeoutMs = 8_000;
+
+async function fetchWithTimeout(path: string, idToken: string): Promise<Response> {
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), requestTimeoutMs);
+  try {
+    return await fetch(`${apiBaseUrl}${path}`, {
+      headers: { Authorization: `Bearer ${idToken}` },
+      signal: controller.signal,
+    });
+  } catch (error) {
+    if (controller.signal.aborted) {
+      throw new ApiError(504, "Patient data request timed out. Please retry shortly.");
+    }
+    throw error;
+  } finally {
+    window.clearTimeout(timeout);
+  }
+}
 
 export async function fetchDoctorHealth(idToken: string): Promise<DoctorHealth> {
-  const response = await fetch(`${apiBaseUrl}/health/authenticated`, {
-    headers: { Authorization: `Bearer ${idToken}` },
-  });
+  const response = await fetchWithTimeout("/health/authenticated", idToken);
 
   if (!response.ok) {
     const body = (await response.json().catch(() => null)) as { detail?: string } | null;
@@ -62,9 +79,7 @@ export async function fetchDoctorHealth(idToken: string): Promise<DoctorHealth> 
 }
 
 export async function fetchDoctorDashboard(idToken: string): Promise<DashboardPatient[]> {
-  const response = await fetch(`${apiBaseUrl}/dashboard/patients?limit=100`, {
-    headers: { Authorization: `Bearer ${idToken}` },
-  });
+  const response = await fetchWithTimeout("/dashboard/patients?limit=100", idToken);
   if (!response.ok) {
     const body = (await response.json().catch(() => null)) as { detail?: string } | null;
     throw new ApiError(response.status, body?.detail ?? "Patient dashboard could not be loaded.");
@@ -73,7 +88,7 @@ export async function fetchDoctorDashboard(idToken: string): Promise<DashboardPa
 }
 
 async function fetchProtected<T>(path: string, idToken: string): Promise<T> {
-  const response = await fetch(`${apiBaseUrl}${path}`, { headers: { Authorization: `Bearer ${idToken}` } });
+  const response = await fetchWithTimeout(path, idToken);
   if (!response.ok) throw new ApiError(response.status, "Patient detail could not be loaded.");
   return response.json() as Promise<T>;
 }

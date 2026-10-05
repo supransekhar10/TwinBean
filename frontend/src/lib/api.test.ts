@@ -21,7 +21,7 @@ describe("fetchDoctorHealth", () => {
 
     expect(fetchMock).toHaveBeenCalledWith(
       "http://localhost:8000/health/authenticated",
-      { headers: { Authorization: "Bearer firebase-token" } },
+      expect.objectContaining({ headers: { Authorization: "Bearer firebase-token" } }),
     );
   });
 
@@ -48,7 +48,7 @@ describe("fetchPatientTwin", () => {
     vi.stubGlobal("fetch", fetchMock);
     await fetchPatientTwin("tbp-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "doctor-token");
     expect(fetchMock).toHaveBeenCalledTimes(3);
-    for (const call of fetchMock.mock.calls) expect(call[1]).toEqual({ headers: { Authorization: "Bearer doctor-token" } });
+    for (const call of fetchMock.mock.calls) expect(call[1]).toEqual(expect.objectContaining({ headers: { Authorization: "Bearer doctor-token" } }));
   });
 });
 
@@ -59,7 +59,7 @@ describe("fetchDoctorDashboard", () => {
     vi.stubGlobal("fetch", fetchMock);
     await fetchDoctorDashboard("doctor-token");
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(fetchMock).toHaveBeenCalledWith("http://localhost:8000/dashboard/patients?limit=100", { headers: { Authorization: "Bearer doctor-token" } });
+    expect(fetchMock).toHaveBeenCalledWith("http://localhost:8000/dashboard/patients?limit=100", expect.objectContaining({ headers: { Authorization: "Bearer doctor-token" } }));
   });
   it("preserves authorization status without exposing backend payloads", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 403, json: async () => null }));
@@ -69,11 +69,11 @@ describe("fetchDoctorDashboard", () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
       ok: false,
       status: 503,
-      json: async () => ({ detail: "Patient data is temporarily unavailable because the Firestore quota is exhausted. Please retry later." }),
+      json: async () => ({ detail: "Patient data is temporarily unavailable because Firestore could not complete the request. Please retry shortly." }),
     }));
     await expect(fetchDoctorDashboard("doctor-token")).rejects.toMatchObject({
       status: 503,
-      message: "Patient data is temporarily unavailable because the Firestore quota is exhausted. Please retry later.",
+      message: "Patient data is temporarily unavailable because Firestore could not complete the request. Please retry shortly.",
     } satisfies Partial<ApiError>);
   });
 });
