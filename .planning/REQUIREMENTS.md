@@ -68,10 +68,14 @@
 
 ## v2 Requirements
 
-### Research Experience
+### Fast Informative Doctor Experience
 
-- **RSCH-01**: Researcher can use a dedicated interface for experiments and model comparisons.
-- **RSCH-02**: Researcher can manage dataset versions and compare evaluation runs interactively.
+- [ ] **PERF-01**: Repeated dashboard and patient-detail reads can use a backend-only local snapshot while Cloud Firestore remains authoritative.
+- [ ] **PERF-02**: Doctor can explicitly refresh from Firestore; a successful refresh replaces old cached data and a failed refresh preserves the last valid snapshot.
+- [ ] **PERF-03**: The interface communicates refresh progress and last successful load without exposing credentials or authorization controls.
+- [ ] **INFO-01**: Synthetic patients use clearly fictional names and show available age, sex, CKD stage, and CKD context.
+- [ ] **INFO-02**: Patient detail summarizes key kidney and IoT measures and presents creatinine and eGFR trends with units.
+- [ ] **INFO-03**: SHAP values retain useful precision and direction while remaining explicitly non-causal.
 
 ## Out of Scope
 
@@ -80,6 +84,7 @@
 | Real patient or protected health data | The initial system is a synthetic-data research prototype. |
 | Clinical diagnosis or production decision support | Regulatory validation and real-world clinical validation are outside this prototype. |
 | Separate researcher interface | Evaluation reports are sufficient for v1. |
+| Assistant data-entry role | The current hackathon brief calls for a conceptual doctor dashboard; adding write permissions would unnecessarily expand the security boundary. |
 | User-managed role assignment | Only trusted Admin SDK code may grant the doctor role. |
 | SQLite persistence | Cloud Firestore is the agreed database. |
 | Full dashboard, IoT, or ML implementation in Phase 1 | The first phase is limited to the secure runnable skeleton and health-check flow. |

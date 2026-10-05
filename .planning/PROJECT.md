@@ -22,14 +22,9 @@ Doctors can review trustworthy, clearly separated evidence about a simulated CKD
 
 ### Active
 
-- [ ] The doctor dashboard lists all monitored patients and defaults to highest predicted 24-hour AKI risk first.
-- [ ] Patients without a valid prediction display "Risk unavailable," never a zero-risk score.
-- [ ] The interface displays prediction time and missing or stale data warnings.
-- [ ] Patient detail separates history, simulated IoT trends, current clinical rule results, future predictions, and SHAP explanations.
-- [ ] Synthetic patient history and a separate simulated IoT stream feed the research prototype.
-- [ ] The model predicts new AKI within 24 hours in adults with CKD using scikit-learn/XGBoost, with SHAP explanations.
-- [ ] Evaluation reports contain actual measured model results from synthetic data rather than invented metrics.
-- [ ] Patient data is stored in Cloud Firestore and restricted to authenticated, authorized doctors.
+- [ ] Doctors can load the dashboard and revisited patient records from a backend-only local synthetic snapshot.
+- [ ] Doctors can explicitly replace the snapshot from authoritative Firestore data without losing a valid snapshot when refresh fails.
+- [ ] Patient identity, kidney measures, IoT trends, and SHAP influence are more informative without inventing clinical evidence.
 
 ### Out of Scope
 
@@ -40,7 +35,7 @@ Doctors can review trustworthy, clearly separated evidence about a simulated CKD
 
 ## Context
 
-Phase 1 established and verified the secure application boundary. A real Firebase demo doctor signed in, refreshed its trusted claim, reached the protected API, and signed out. Phase 2 now adds reproducible synthetic adult CKD history and a distinct simulated IoT stream in Firestore without weakening that boundary.
+The first six phases delivered the secure synthetic-data prototype, doctor dashboard, patient digital twin, and measured evaluation. The current milestone improves responsiveness and clinical readability while keeping Firestore authoritative and authorization unchanged.
 
 The prototype must keep present-tense clinical rule outputs distinct from forward-looking predictions. Missing, invalid, or stale inputs must remain visible and must never be represented as zero risk.
 
@@ -77,6 +72,9 @@ The frontend stack is Next.js, TypeScript, Tailwind CSS, and Recharts. The backe
 | Begin with a secure vertical skeleton | Validates integration and authorization before clinical features | Validated in Phase 1 |
 | Use GSD governance with Codex execution | Keeps intent and progress traceable | Active |
 | Bound task repair cycles to three failed checks | Surfaces blockers without weakening tests | Active |
+| Keep a backend-only local synthetic snapshot | Makes repeated reads fast without exposing privileged credentials or introducing a second authoritative database | Active |
+| Replace cached data only after a successful Firestore refresh | Prevents a transient Firebase failure from destroying the last usable snapshot | Active |
+| Keep the initial prototype doctor-only | The hackathon brief asks for a conceptual doctor dashboard; an assistant role would expand authorization scope without a demonstrated need | Active |
 
 ---
-*Last updated: 2026-10-03 after Phase 1*
+*Last updated: 2026-10-05 for the fast informative doctor experience milestone*

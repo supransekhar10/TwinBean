@@ -42,7 +42,7 @@ class ClinicalResultRequest(BaseModel):
         return value.astimezone(UTC)
 
 
-@router.get("/patients", response_model=list[PatientSummary])
+@router.get("/patients", response_model=list[PatientSummary], response_model_exclude_none=True)
 def list_patients(
     _claims: Annotated[dict[str, Any], Depends(require_doctor)],
     repository: Annotated[PatientRepository, Depends(get_patient_repository)],
@@ -56,12 +56,13 @@ def list_dashboard_patients(
     _claims: Annotated[dict[str, Any], Depends(require_doctor)],
     repository: Annotated[PatientRepository, Depends(get_patient_repository)],
     limit: Annotated[int, Query(ge=1, le=100)] = 100,
+    refresh: Annotated[bool, Query()] = False,
 ) -> list[DashboardPatient]:
     """Return stored dashboard evidence without prediction-generation side effects."""
-    return repository.list_dashboard_patients(limit)
+    return repository.list_dashboard_patients(limit, refresh=refresh)
 
 
-@router.get("/patients/{patient_id}", response_model=PatientDetail)
+@router.get("/patients/{patient_id}", response_model=PatientDetail, response_model_exclude_none=True)
 def get_patient(
     patient_id: Annotated[str, Path(pattern=_PATIENT_ID_PATTERN)],
     _claims: Annotated[dict[str, Any], Depends(require_doctor)],

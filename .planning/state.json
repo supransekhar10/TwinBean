@@ -1,7 +1,7 @@
 {
   "contract": "1.0.0",
   "flavor": "core",
-  "milestone": null,
+  "milestone": "v1.1 Fast Informative Doctor Experience",
   "phases": [
     {
       "number": "1",
@@ -21,23 +21,28 @@
     {
       "number": "4",
       "name": "Risk-Ranked Doctor Dashboard",
-      "status": "pending"
+      "status": "complete"
     },
     {
       "number": "5",
       "name": "Patient Digital Twin Detail",
-      "status": "pending"
+      "status": "complete"
     },
     {
       "number": "6",
       "name": "Leakage-Resistant Model Evaluation",
-      "status": "pending"
+      "status": "complete"
+    },
+    {
+      "number": "7",
+      "name": "Fast Informative Doctor Experience",
+      "status": "verifying"
     }
   ],
   "next": {
-    "command": "/gsd:progress --next",
-    "label": "Advance to the next step (plan phase 4)",
-    "reason": "Phase 4 of 6 — needs a plan"
+    "command": "/gsd:verify-work 7",
+    "label": "Verify Phase 7",
+    "reason": "Implementation is complete; live Firestore refresh remains to be verified"
   },
-  "updated_at": "2026-10-04T20:10:15.721Z"
+  "updated_at": "2026-10-05T01:04:08.121Z"
 }

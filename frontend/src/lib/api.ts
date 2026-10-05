@@ -17,13 +17,13 @@ export type DashboardPrediction =
   | { status: "unavailable"; prediction_cutoff?: string | null; generated_at?: string | null; reasons: string[]; warnings: string[] };
 
 export type DashboardPatient = {
-  patient: { patient_id: string; display_name: string; age: number; ckd_stage: string };
+  patient: { patient_id: string; display_name: string; age: number; sex?: string | null; ckd_stage: string; ckd_context?: string | null };
   current_rule: DashboardClinicalRule | null;
   prediction: DashboardPrediction;
 };
 
 export type PatientDetail = {
-  patient: { patient_id: string; display_name: string; age: number; ckd_stage: string };
+  patient: DashboardPatient["patient"];
   ehr_history: Array<{ event_id: string; event_type: string; event_time: string; data: Record<string, string | number> }>;
   iot_observations: Array<{ observation_id: string; measurement_type: string; observed_at: string; data: Record<string, string | number> }>;
 };
@@ -78,8 +78,8 @@ export async function fetchDoctorHealth(idToken: string): Promise<DoctorHealth> 
   return response.json() as Promise<DoctorHealth>;
 }
 
-export async function fetchDoctorDashboard(idToken: string): Promise<DashboardPatient[]> {
-  const response = await fetchWithTimeout("/dashboard/patients?limit=100", idToken);
+export async function fetchDoctorDashboard(idToken: string, refresh = false): Promise<DashboardPatient[]> {
+  const response = await fetchWithTimeout(`/dashboard/patients?limit=100${refresh ? "&refresh=true" : ""}`, idToken);
   if (!response.ok) {
     const body = (await response.json().catch(() => null)) as { detail?: string } | null;
     throw new ApiError(response.status, body?.detail ?? "Patient dashboard could not be loaded.");

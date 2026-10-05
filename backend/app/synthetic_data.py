@@ -16,6 +16,13 @@ from uuid import NAMESPACE_URL, uuid5
 
 MAX_PATIENT_COUNT = 100
 _CKD_STAGES = ("G3a", "G3b", "G4")
+_SYNTHETIC_NAMES = (
+    "Aarav Mehta", "Ananya Rao", "Arjun Nair", "Diya Sharma",
+    "Ishaan Gupta", "Kavya Iyer", "Rohan Das", "Meera Kapoor",
+    "Vikram Joshi", "Nisha Menon", "Aditya Kulkarni", "Sara Thomas",
+    "Rahul Verma", "Priya Banerjee", "Neel Shah", "Aisha Khan",
+    "Karan Patel", "Leela Krishnan", "Sanjay Bose", "Tara Reddy",
+)
 
 
 def _utc(value: datetime) -> datetime:
@@ -232,7 +239,7 @@ def generate_cohort(
         age = random.randint(42, 84)
         patient = SyntheticPatient(
             patient_id=patient_id,
-            display_name=f"Synthetic CKD Patient {index + 1:02d}",
+            display_name=_SYNTHETIC_NAMES[index % len(_SYNTHETIC_NAMES)],
             age=age,
             sex=("female" if random.randrange(2) == 0 else "male"),
             ckd_stage=stage,

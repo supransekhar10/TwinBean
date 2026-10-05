@@ -2,7 +2,7 @@
 
 ## Overview
 
-TwinBean advances through six vertical phases: establish a secure runnable application boundary, build synthetic kidney data in Firestore, add clinically explicit prediction outputs, deliver risk-ranked doctor workflows, complete the patient digital-twin view, and finish with leakage-resistant comparative evaluation using actual model results.
+TwinBean's first six phases delivered the secure research prototype. Phase 7 improves repeated-load speed and clinical readability without changing Firestore authority, doctor-only authorization, or prediction semantics.
 
 ## Delivery Workflow
 
@@ -23,6 +23,7 @@ TwinBean advances through six vertical phases: establish a secure runnable appli
 - [x] **Phase 4: Risk-Ranked Doctor Dashboard** - Let doctors review every monitored patient with valid risks prioritized safely. (completed 2026-10-05)
 - [x] **Phase 5: Patient Digital Twin Detail** - Present history, trends, rules, predictions, warnings, and explanations in distinct sections. (completed 2026-10-05)
 - [x] **Phase 6: Leakage-Resistant Model Evaluation** - Report actual patient-level, time-safe EHR-only and combined-stream evaluation results. (completed 2026-10-05)
+- [ ] **Phase 7: Fast Informative Doctor Experience** - Add a refreshable backend snapshot and richer synthetic patient evidence without fabricating results.
 
 ## Phase Details
 
@@ -129,9 +130,24 @@ Plans:
 
 **Plans:** TBD
 
+### Phase 7: Fast Informative Doctor Experience
+
+**Goal:** As a doctor, I want repeated dashboard and patient-detail visits to load quickly while retaining an explicit Firestore refresh path and more useful synthetic evidence.
+**Mode:** mvp
+**Depends on:** Phases 4 and 5
+**Requirements:** PERF-01, PERF-02, PERF-03, INFO-01, INFO-02, INFO-03
+**Success Criteria** (what must be TRUE):
+  1. A valid backend-only snapshot serves repeated protected reads while Firestore remains authoritative.
+  2. Explicit refresh replaces old cached data only after Firestore succeeds; failures retain the last valid snapshot.
+  3. Dashboard and patient detail show richer fictional identity and kidney trends without changing clinical-rule or risk semantics.
+  4. Tests, lint, production build, and local routes pass; live Firestore refresh evidence is recorded separately.
+
+**Plans:** 1/1 implementation complete; live Firestore refresh verification pending
+**UI hint:** yes
+
 ## Progress
 
-**Execution Order:** Phase 1 -> Phase 2 -> Phase 3 -> Phase 4 -> Phase 5; Phase 6 begins after Phase 3 and completes the milestone.
+**Execution Order:** Phases 1-6 complete the original milestone; Phase 7 is the current responsiveness and information-quality milestone.
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -141,3 +157,4 @@ Plans:
 | 4. Risk-Ranked Doctor Dashboard | 2/2 | Complete    | 2026-10-05 |
 | 5. Patient Digital Twin Detail | 1/1 | Complete    | 2026-10-05 |
 | 6. Leakage-Resistant Model Evaluation | 1/1 | Complete    | 2026-10-05 |
+| 7. Fast Informative Doctor Experience | 1/1 | Verification pending | - |

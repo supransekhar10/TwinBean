@@ -1,4 +1,5 @@
 from datetime import UTC, datetime
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
@@ -18,6 +19,7 @@ CUTOFF = datetime(2026, 1, 15, 12, tzinfo=UTC)
 
 class ProjectionRepository(PatientRepository):
     def __init__(self) -> None:
+        self._disk_cache_enabled = False
         self._dashboard_cache = {}
         self.patient_limit: int | None = None
         self.rule_calls: list[tuple[str, int]] = []
@@ -107,12 +109,29 @@ def test_repository_builds_bounded_sorted_separate_dashboard_projection() -> Non
     assert repository.prediction_calls == [(patient.patient_id, 1) for patient in repository.patients]
 
 
+def test_dashboard_disk_snapshot_serves_new_repository_without_firestore(
+    tmp_path: Path,
+) -> None:
+    cache_path = tmp_path / "dashboard-100.json"
+    writer = ProjectionRepository()
+    writer._disk_cache_enabled = True
+    writer._dashboard_cache_path = lambda _limit: cache_path  # type: ignore[method-assign]
+    expected = writer.list_dashboard_patients(100)
+
+    reader = ProjectionRepository()
+    reader._disk_cache_enabled = True
+    reader._dashboard_cache_path = lambda _limit: cache_path  # type: ignore[method-assign]
+    reader._load_active_cohort = lambda: (_ for _ in ()).throw(AssertionError("Firestore must not be read"))  # type: ignore[method-assign]
+
+    assert reader.list_dashboard_patients(100) == expected
+
+
 class RouteRepository:
     def __init__(self) -> None:
-        self.calls: list[int] = []
+        self.calls: list[tuple[int, bool]] = []
 
-    def list_dashboard_patients(self, limit: int) -> list[object]:
-        self.calls.append(limit)
+    def list_dashboard_patients(self, limit: int, refresh: bool = False) -> list[object]:
+        self.calls.append((limit, refresh))
         return ProjectionRepository().list_dashboard_patients(limit)
 
 
@@ -129,7 +148,7 @@ def test_doctor_can_read_dashboard_without_generating_predictions(monkeypatch: p
     response = client.get("/dashboard/patients?limit=3", headers={"Authorization": "Bearer valid"})
 
     assert response.status_code == 200
-    assert route_repository.calls == [3]
+    assert route_repository.calls == [(3, False)]
     payload = response.json()
     assert [row["patient"]["display_name"] for row in payload] == ["Zulu", "alpha", "Beta"]
     assert set(payload[0]) == {"patient", "current_rule", "prediction"}
@@ -167,8 +186,21 @@ def test_dashboard_rejects_unbounded_limit(monkeypatch: pytest.MonkeyPatch, rout
     assert route_repository.calls == []
 
 
+def test_doctor_can_explicitly_refresh_dashboard_cache(
+    monkeypatch: pytest.MonkeyPatch, route_repository: RouteRepository
+) -> None:
+    monkeypatch.setattr(auth_module, "verify_firebase_token", lambda _token: {"uid": "doctor", "role": "doctor"})
+    response = client.get(
+        "/dashboard/patients?limit=100&refresh=true",
+        headers={"Authorization": "Bearer valid"},
+    )
+
+    assert response.status_code == 200
+    assert route_repository.calls == [(100, True)]
+
+
 def test_dashboard_returns_honest_empty_cohort(monkeypatch: pytest.MonkeyPatch, route_repository: RouteRepository) -> None:
-    route_repository.list_dashboard_patients = lambda limit: []  # type: ignore[method-assign]
+    route_repository.list_dashboard_patients = lambda limit, refresh=False: []  # type: ignore[method-assign]
     monkeypatch.setattr(auth_module, "verify_firebase_token", lambda _token: {"uid": "doctor", "role": "doctor"})
     response = client.get("/dashboard/patients", headers={"Authorization": "Bearer valid"})
     assert response.status_code == 200
@@ -179,7 +211,7 @@ def test_dashboard_reports_firestore_quota_as_temporarily_unavailable(
     monkeypatch: pytest.MonkeyPatch,
     route_repository: RouteRepository,
 ) -> None:
-    def quota_exhausted(_limit: int) -> list[object]:
+    def quota_exhausted(_limit: int, refresh: bool = False) -> list[object]:
         raise ResourceExhausted("Quota exceeded.")
 
     route_repository.list_dashboard_patients = quota_exhausted  # type: ignore[method-assign]

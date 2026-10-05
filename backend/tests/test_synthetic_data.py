@@ -40,6 +40,8 @@ def test_adult_ckd_patients_have_plausible_longitudinal_ehr_content() -> None:
     cohort = generate_cohort(77, "2026.1", TIME_BASIS, patient_count=3)
 
     assert all(patient.age >= 18 for patient in cohort.patients)
+    assert all(patient.display_name and "Synthetic CKD Patient" not in patient.display_name for patient in cohort.patients)
+    assert len({patient.display_name for patient in cohort.patients}) == len(cohort.patients)
     assert all(patient.ckd_stage in {"G3a", "G3b", "G4"} for patient in cohort.patients)
     assert all("chronic kidney disease" in patient.ckd_context.lower() for patient in cohort.patients)
     for patient in cohort.patients:

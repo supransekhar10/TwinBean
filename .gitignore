@@ -8,6 +8,7 @@ frontend/.env*
 # Backend
 backend/.venv/
 backend/.pytest_cache/
+backend/.cache/
 backend/*.egg-info/
 backend/**/__pycache__/
 backend/.env*

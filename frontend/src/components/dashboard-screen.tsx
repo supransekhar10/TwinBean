@@ -15,13 +15,17 @@ export function DashboardScreen() {
   const [user, setUser] = useState<User | null>(null);
   const [rows, setRows] = useState<DashboardPatient[]>([]);
   const [state, setState] = useState<DashboardState>("loading");
+  const [refreshing, setRefreshing] = useState(false);
+  const [lastSynced, setLastSynced] = useState<Date | null>(null);
 
-  const loadDashboard = useCallback(async (activeUser: User) => {
-    setState("loading");
+  const loadDashboard = useCallback(async (activeUser: User, refresh = false) => {
+    if (refresh) setRefreshing(true);
+    else setState("loading");
     try {
       const token = await activeUser.getIdToken();
       await fetchDoctorHealth(token);
-      setRows(await fetchDoctorDashboard(token));
+      setRows(await fetchDoctorDashboard(token, refresh));
+      setLastSynced(new Date());
       setState("ready");
     } catch (error) {
       setState(
@@ -33,6 +37,8 @@ export function DashboardScreen() {
               ? "unauthorized"
               : "error",
       );
+    } finally {
+      setRefreshing(false);
     }
   }, []);
 
@@ -69,7 +75,13 @@ export function DashboardScreen() {
           <h1 id="dashboard-title">Monitored patients</h1>
           <p>Review current clinical evidence and future 24-hour AKI risk as separate signals.</p>
         </div>
-        <span className="prototype-label">Research prototype / synthetic data only</span>
+        <div className="dashboard-sync">
+          <span className="prototype-label">Research prototype / synthetic data only</span>
+          <span>{lastSynced ? `Loaded at ${lastSynced.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : "Loading saved snapshot"}</span>
+          <button className="secondary-button" disabled={refreshing || !user} onClick={() => user && void loadDashboard(user, true)} type="button">
+            {refreshing ? "Refreshing..." : "Refresh from Firestore"}
+          </button>
+        </div>
       </section>
 
       <DoctorDashboard

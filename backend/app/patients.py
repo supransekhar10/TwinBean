@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import re
 from collections import Counter
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from pathlib import Path
 from time import monotonic
 from typing import Annotated, Any, Literal, Mapping
 
@@ -46,7 +48,9 @@ class PatientSummary(BaseModel):
     patient_id: str
     display_name: str
     age: int
+    sex: str | None = None
     ckd_stage: str
+    ckd_context: str | None = None
 
 
 class PatientDetail(BaseModel):
@@ -138,6 +142,7 @@ class PatientRepository:
 
     def __init__(self, client: Any) -> None:
         self._client = client
+        self._disk_cache_enabled = client.__class__.__module__.startswith("google.cloud.firestore")
         self._dashboard_cache: dict[int, tuple[float, tuple[DashboardPatient, ...]]] = {}
 
     @classmethod
@@ -161,16 +166,24 @@ class PatientRepository:
         )
         return [self._summary_from_data(snapshot.to_dict() or {}, active) for snapshot in snapshots]
 
-    def list_dashboard_patients(self, limit: int) -> list[DashboardPatient]:
+    def list_dashboard_patients(self, limit: int, refresh: bool = False) -> list[DashboardPatient]:
         """Project only latest stored evidence; this method never invokes prediction."""
         from .clinical_rules import ClinicalRuleResult
         from .prediction_service import validate_aki_prediction_result
 
         bounded_limit = min(max(limit, 1), MAX_SEED_PATIENTS)
-        cached = self._dashboard_cache.get(bounded_limit)
+        cached = None if refresh else self._dashboard_cache.get(bounded_limit)
         now = monotonic()
         if cached is not None and cached[0] > now:
             return [row.model_copy(deep=True) for row in cached[1]]
+        if not refresh and self._disk_cache_enabled:
+            disk_rows = self._load_dashboard_disk_cache(bounded_limit)
+            if disk_rows is not None:
+                self._dashboard_cache[bounded_limit] = (
+                    now + DASHBOARD_CACHE_TTL_SECONDS,
+                    tuple(row.model_copy(deep=True) for row in disk_rows),
+                )
+                return disk_rows
 
         active = self._load_active_cohort()
         if active is None:
@@ -218,20 +231,79 @@ class PatientRepository:
                 )
             rows.append(DashboardPatient(patient=patient, current_rule=current_rule, prediction=prediction))
         sorted_rows = sorted(rows, key=_dashboard_sort_key)
+        if self._disk_cache_enabled:
+            self._store_dashboard_disk_cache(bounded_limit, sorted_rows)
+            if refresh:
+                self._clear_patient_disk_cache()
         self._dashboard_cache[bounded_limit] = (
             now + DASHBOARD_CACHE_TTL_SECONDS,
             tuple(row.model_copy(deep=True) for row in sorted_rows),
         )
         return sorted_rows
 
+    @staticmethod
+    def _dashboard_cache_path(limit: int) -> Path:
+        return Path(__file__).resolve().parents[1] / ".cache" / f"dashboard-{limit}.json"
+
+    def _load_dashboard_disk_cache(self, limit: int) -> list[DashboardPatient] | None:
+        path = self._dashboard_cache_path(limit)
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+            return [DashboardPatient.model_validate(item) for item in payload["rows"]]
+        except (FileNotFoundError, KeyError, TypeError, ValueError, json.JSONDecodeError):
+            return None
+
+    def _store_dashboard_disk_cache(self, limit: int, rows: list[DashboardPatient]) -> None:
+        path = self._dashboard_cache_path(limit)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        temporary = path.with_suffix(".tmp")
+        payload = {
+            "synced_at": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
+            "rows": [row.model_dump(mode="json") for row in rows],
+        }
+        temporary.write_text(json.dumps(payload, separators=(",", ":")), encoding="utf-8")
+        os.replace(temporary, path)
+
+    @staticmethod
+    def _patient_cache_path(patient_id: str, suffix: str) -> Path:
+        return Path(__file__).resolve().parents[1] / ".cache" / f"patient-{patient_id}-{suffix}.json"
+
+    @staticmethod
+    def _read_cache_json(path: Path) -> object | None:
+        try:
+            return json.loads(path.read_text(encoding="utf-8"))
+        except (FileNotFoundError, TypeError, ValueError, json.JSONDecodeError):
+            return None
+
+    @staticmethod
+    def _write_cache_json(path: Path, payload: object) -> None:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        temporary = path.with_suffix(".tmp")
+        temporary.write_text(json.dumps(payload, separators=(",", ":")), encoding="utf-8")
+        os.replace(temporary, path)
+
+    def _clear_patient_disk_cache(self) -> None:
+        cache_dir = Path(__file__).resolve().parents[1] / ".cache"
+        if not cache_dir.exists():
+            return
+        for path in cache_dir.glob("patient-*.json"):
+            path.unlink(missing_ok=True)
+
     def get_patient(self, patient_id: str, event_limit: int = 100) -> PatientDetail | None:
         """Read one active owned root and its independent EHR and IoT streams."""
         if not _PATIENT_ID.fullmatch(patient_id):
             raise ValueError("patient identifier must be a stable TwinBean identifier")
+        cache_path = self._patient_cache_path(patient_id, f"detail-{event_limit}")
+        cached = self._read_cache_json(cache_path) if self._disk_cache_enabled else None
+        if cached is not None:
+            return PatientDetail.model_validate(cached)
         active = self._load_active_cohort()
         if active is None:
             return None
-        return self._get_patient_for_active(active, patient_id, event_limit)
+        detail = self._get_patient_for_active(active, patient_id, event_limit)
+        if detail is not None and self._disk_cache_enabled:
+            self._write_cache_json(cache_path, detail.model_dump(mode="json"))
+        return detail
 
     def get_clinical_context(self, patient_id: str) -> ClinicalContext | None:
         """Resolve one patient from the validated active immutable cohort only."""
@@ -365,25 +437,37 @@ class PatientRepository:
         """Return only active-cohort current-rule documents, newest calculation first."""
 
         from .clinical_rules import ClinicalRuleResult
-
-        return [
+        cache_path = self._patient_cache_path(patient_id, f"rules-{limit}")
+        cached = self._read_cache_json(cache_path) if self._disk_cache_enabled else None
+        if isinstance(cached, list):
+            return [ClinicalRuleResult.model_validate(payload) for payload in cached]
+        results = [
             ClinicalRuleResult.model_validate(payload)
             for payload in self._list_clinical_result_payloads(
                 patient_id, limit, "clinical_rules", "clinical_rule", "calculation_time"
             )
         ]
+        if self._disk_cache_enabled:
+            self._write_cache_json(cache_path, [result.model_dump(mode="json") for result in results])
+        return results
 
     def list_aki_predictions(self, patient_id: str, limit: int) -> list[Any]:
         """Return only active-cohort future-prediction documents, newest generation first."""
 
         from .prediction_service import validate_aki_prediction_result
-
-        return [
+        cache_path = self._patient_cache_path(patient_id, f"predictions-{limit}")
+        cached = self._read_cache_json(cache_path) if self._disk_cache_enabled else None
+        if isinstance(cached, list):
+            return [validate_aki_prediction_result(payload) for payload in cached]
+        results = [
             validate_aki_prediction_result(payload)
             for payload in self._list_clinical_result_payloads(
                 patient_id, limit, "aki_predictions", "aki_prediction", "generated_at"
             )
         ]
+        if self._disk_cache_enabled:
+            self._write_cache_json(cache_path, [result.model_dump(mode="json") for result in results])
+        return results
 
     def _list_clinical_result_payloads(
         self,
@@ -571,7 +655,14 @@ class PatientRepository:
         if not isinstance(age, int) or isinstance(age, bool) or age < 18:
             raise ValueError("stored patient age must be an adult integer")
         _utc_timestamp(data.get("created_at"))
-        return PatientSummary(patient_id=patient_id, display_name=display_name, age=age, ckd_stage=stage)
+        return PatientSummary(
+            patient_id=patient_id,
+            display_name=display_name,
+            age=age,
+            sex=str(data["sex"]) if data.get("sex") is not None else None,
+            ckd_stage=stage,
+            ckd_context=str(data["ckd_context"]) if data.get("ckd_context") is not None else None,
+        )
 
     @staticmethod
     def _ehr_event_from_data(data: Mapping[str, object], active: _ActiveCohort, patient_id: str) -> EhrEvent:

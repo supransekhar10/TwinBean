@@ -61,6 +61,15 @@ describe("fetchDoctorDashboard", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(fetchMock).toHaveBeenCalledWith("http://localhost:8000/dashboard/patients?limit=100", expect.objectContaining({ headers: { Authorization: "Bearer doctor-token" } }));
   });
+  it("requests an authoritative Firestore refresh only when asked", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => [] });
+    vi.stubGlobal("fetch", fetchMock);
+    await fetchDoctorDashboard("doctor-token", true);
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://localhost:8000/dashboard/patients?limit=100&refresh=true",
+      expect.objectContaining({ headers: { Authorization: "Bearer doctor-token" } }),
+    );
+  });
   it("preserves authorization status without exposing backend payloads", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 403, json: async () => null }));
     await expect(fetchDoctorDashboard("wrong-role")).rejects.toMatchObject({ status: 403, message: "Patient dashboard could not be loaded." } satisfies Partial<ApiError>);
