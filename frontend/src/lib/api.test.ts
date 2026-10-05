@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { ApiError, fetchDoctorDashboard, fetchDoctorHealth } from "./api";
+import { ApiError, fetchDoctorDashboard, fetchDoctorHealth, fetchPatientTwin } from "./api";
 
 describe("fetchDoctorHealth", () => {
   afterEach(() => vi.unstubAllGlobals());
@@ -38,6 +38,17 @@ describe("fetchDoctorHealth", () => {
     await expect(fetchDoctorHealth("wrong-role")).rejects.toThrow(
       "Doctor access is required.",
     );
+  });
+});
+
+describe("fetchPatientTwin", () => {
+  afterEach(() => vi.unstubAllGlobals());
+  it("loads detail, rule, and prediction as separate protected resources", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => [] });
+    vi.stubGlobal("fetch", fetchMock);
+    await fetchPatientTwin("tbp-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "doctor-token");
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    for (const call of fetchMock.mock.calls) expect(call[1]).toEqual({ headers: { Authorization: "Bearer doctor-token" } });
   });
 });
 

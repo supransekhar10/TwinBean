@@ -22,6 +22,24 @@ export type DashboardPatient = {
   prediction: DashboardPrediction;
 };
 
+export type PatientDetail = {
+  patient: { patient_id: string; display_name: string; age: number; ckd_stage: string };
+  ehr_history: Array<{ event_id: string; event_type: string; event_time: string; data: Record<string, string | number> }>;
+  iot_observations: Array<{ observation_id: string; measurement_type: string; observed_at: string; data: Record<string, string | number> }>;
+};
+
+export type ClinicalRuleResult = DashboardClinicalRule & {
+  evidence: Array<{ event_id: string; observed_at: string; value_mg_dl: number }>;
+  criteria_met: string[];
+  limitation: string;
+};
+
+export type AkiPrediction =
+  | (Extract<DashboardPrediction, { status: "unavailable" }>)
+  | (Extract<DashboardPrediction, { status: "available" }> & {
+      attributions: Array<{ feature: string; value: number; shap_margin: number; semantics: string }>;
+    });
+
 export class ApiError extends Error {
   constructor(public readonly status: number, message: string) {
     super(message);
@@ -49,4 +67,20 @@ export async function fetchDoctorDashboard(idToken: string): Promise<DashboardPa
   });
   if (!response.ok) throw new ApiError(response.status, "Patient dashboard could not be loaded.");
   return response.json() as Promise<DashboardPatient[]>;
+}
+
+async function fetchProtected<T>(path: string, idToken: string): Promise<T> {
+  const response = await fetch(`${apiBaseUrl}${path}`, { headers: { Authorization: `Bearer ${idToken}` } });
+  if (!response.ok) throw new ApiError(response.status, "Patient detail could not be loaded.");
+  return response.json() as Promise<T>;
+}
+
+export async function fetchPatientTwin(patientId: string, idToken: string) {
+  const encodedId = encodeURIComponent(patientId);
+  const [detail, rules, predictions] = await Promise.all([
+    fetchProtected<PatientDetail>(`/patients/${encodedId}`, idToken),
+    fetchProtected<ClinicalRuleResult[]>(`/patients/${encodedId}/clinical-rules?limit=1`, idToken),
+    fetchProtected<AkiPrediction[]>(`/patients/${encodedId}/aki-predictions?limit=1`, idToken),
+  ]);
+  return { detail, rule: rules[0] ?? null, prediction: predictions[0] ?? null };
 }
