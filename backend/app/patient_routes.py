@@ -1,4 +1,5 @@
 from datetime import UTC, datetime
+from functools import lru_cache
 from typing import Annotated, Any
 
 import anyio
@@ -17,6 +18,7 @@ _PATIENT_ID_PATTERN = r"^tbp-[0-9a-f]{32}$"
 _INFERENCE_LIMITER = anyio.CapacityLimiter(get_settings().aki_inference_concurrency)
 
 
+@lru_cache(maxsize=1)
 def get_patient_repository() -> PatientRepository:
     """Provide the server-only repository after doctor authorization succeeds."""
     return PatientRepository.from_firestore()
@@ -24,7 +26,7 @@ def get_patient_repository() -> PatientRepository:
 
 def get_prediction_service() -> PredictionService:
     """Construct the server-only clinical orchestration service after authorization."""
-    return PredictionService(PatientRepository.from_firestore())
+    return PredictionService(get_patient_repository())
 
 
 class ClinicalResultRequest(BaseModel):

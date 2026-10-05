@@ -18,6 +18,7 @@ CUTOFF = datetime(2026, 1, 15, 12, tzinfo=UTC)
 
 class ProjectionRepository(PatientRepository):
     def __init__(self) -> None:
+        self._dashboard_cache = {}
         self.patient_limit: int | None = None
         self.rule_calls: list[tuple[str, int]] = []
         self.prediction_calls: list[tuple[str, int]] = []
@@ -27,29 +28,36 @@ class ProjectionRepository(PatientRepository):
             PatientSummary(patient_id="tbp-cccccccccccccccccccccccccccccccc", display_name="Beta", age=58, ckd_stage="G3a"),
         ]
 
-    def list_patients(self, limit: int) -> list[PatientSummary]:
+    def _load_active_cohort(self) -> object:
+        return object()
+
+    def _list_patients_for_active(self, _active: object, limit: int) -> list[PatientSummary]:
         self.patient_limit = limit
         return self.patients[:limit]
 
-    def list_clinical_rules(self, patient_id: str, limit: int) -> list[ClinicalRuleResult]:
-        self.rule_calls.append((patient_id, limit))
-        if patient_id.endswith("a" * 32):
-            return []
-        return [
-            ClinicalRuleResult(
+    def _list_clinical_result_payloads_for_active(
+        self,
+        _active: object,
+        patient_id: str,
+        limit: int,
+        collection: str,
+        _result_type: str,
+        _order_field: str,
+    ) -> list[dict[str, object]]:
+        if collection == "clinical_rules":
+            self.rule_calls.append((patient_id, limit))
+            if patient_id.endswith("a" * 32):
+                return []
+            return [ClinicalRuleResult(
                 status="insufficient_creatinine_history",
                 calculation_time=CUTOFF,
                 prediction_cutoff=CUTOFF,
                 evidence=[],
                 insufficiency_reasons=["no_valid_creatinine_evidence"],
-            )
-        ]
-
-    def list_aki_predictions(self, patient_id: str, limit: int) -> list[AvailableAkiPrediction | UnavailableAkiPrediction]:
+            ).model_dump(mode="json")]
         self.prediction_calls.append((patient_id, limit))
         if patient_id.endswith("a" * 32):
-            return [
-                AvailableAkiPrediction(
+            return [AvailableAkiPrediction(
                     status="available",
                     outcome="new_aki_within_24h",
                     probability=0.82,
@@ -60,19 +68,16 @@ class ProjectionRepository(PatientRepository):
                     freshness_policy_version="freshness-v1",
                     warnings=["iot_data_stale"],
                     attributions=[],
-                )
-            ]
+                ).model_dump(mode="json")]
         if patient_id.endswith("b" * 32):
-            return [
-                UnavailableAkiPrediction(
+            return [UnavailableAkiPrediction(
                     status="unavailable",
                     outcome="new_aki_within_24h",
                     prediction_cutoff=CUTOFF,
                     generated_at=CUTOFF,
                     reasons=["missing_iot_window"],
                     warnings=["iot_data_missing"],
-                )
-            ]
+                ).model_dump(mode="json")]
         return []
 
 
@@ -95,6 +100,11 @@ def test_repository_builds_bounded_sorted_separate_dashboard_projection() -> Non
     assert rows[2].prediction.status == "unavailable"
     assert rows[2].prediction.reasons == ["no_stored_prediction"]
     assert "probability" not in rows[2].prediction.model_dump()
+
+    cached_rows = repository.list_dashboard_patients(500)
+    assert cached_rows == rows
+    assert repository.rule_calls == [(patient.patient_id, 1) for patient in repository.patients]
+    assert repository.prediction_calls == [(patient.patient_id, 1) for patient in repository.patients]
 
 
 class RouteRepository:

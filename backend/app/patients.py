@@ -8,6 +8,7 @@ import re
 from collections import Counter
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from time import monotonic
 from typing import Annotated, Any, Literal, Mapping
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -23,6 +24,7 @@ MAX_CLINICAL_RESULT_RECORDS = 100
 MAX_WRITES_PER_BATCH = 100
 MAX_BATCH_BYTES = 8 * 1024 * 1024
 MAX_DOCUMENT_BYTES = 900 * 1024
+DASHBOARD_CACHE_TTL_SECONDS = 300.0
 COHORTS_COLLECTION = "twinbean_cohorts"
 ACTIVE_COHORT_PATH = "twinbean_metadata/active_cohort"
 _PATIENT_ID = re.compile(r"^tbp-[0-9a-f]{32}$")
@@ -132,6 +134,7 @@ class PatientRepository:
 
     def __init__(self, client: Any) -> None:
         self._client = client
+        self._dashboard_cache: dict[int, tuple[float, tuple[DashboardPatient, ...]]] = {}
 
     @classmethod
     def from_firestore(cls) -> "PatientRepository":
@@ -141,6 +144,9 @@ class PatientRepository:
         active = self._load_active_cohort()
         if active is None:
             return []
+        return self._list_patients_for_active(active, limit)
+
+    def _list_patients_for_active(self, active: _ActiveCohort, limit: int) -> list[PatientSummary]:
         bounded_limit = min(max(limit, 1), 100)
         snapshots = (
             self._cohort_document(active.cohort_id)
@@ -153,10 +159,32 @@ class PatientRepository:
 
     def list_dashboard_patients(self, limit: int) -> list[DashboardPatient]:
         """Project only latest stored evidence; this method never invokes prediction."""
+        from .clinical_rules import ClinicalRuleResult
+        from .prediction_service import validate_aki_prediction_result
+
+        bounded_limit = min(max(limit, 1), MAX_SEED_PATIENTS)
+        cached = self._dashboard_cache.get(bounded_limit)
+        now = monotonic()
+        if cached is not None and cached[0] > now:
+            return [row.model_copy(deep=True) for row in cached[1]]
+
+        active = self._load_active_cohort()
+        if active is None:
+            return []
         rows: list[DashboardPatient] = []
-        for patient in self.list_patients(min(max(limit, 1), MAX_SEED_PATIENTS)):
-            rules = self.list_clinical_rules(patient.patient_id, 1)
-            predictions = self.list_aki_predictions(patient.patient_id, 1)
+        for patient in self._list_patients_for_active(active, bounded_limit):
+            rules = [
+                ClinicalRuleResult.model_validate(payload)
+                for payload in self._list_clinical_result_payloads_for_active(
+                    active, patient.patient_id, 1, "clinical_rules", "clinical_rule", "calculation_time"
+                )
+            ]
+            predictions = [
+                validate_aki_prediction_result(payload)
+                for payload in self._list_clinical_result_payloads_for_active(
+                    active, patient.patient_id, 1, "aki_predictions", "aki_prediction", "generated_at"
+                )
+            ]
             current_rule = None
             if rules:
                 rule = rules[0]
@@ -185,7 +213,12 @@ class PatientRepository:
                     warnings=stored.warnings,
                 )
             rows.append(DashboardPatient(patient=patient, current_rule=current_rule, prediction=prediction))
-        return sorted(rows, key=_dashboard_sort_key)
+        sorted_rows = sorted(rows, key=_dashboard_sort_key)
+        self._dashboard_cache[bounded_limit] = (
+            now + DASHBOARD_CACHE_TTL_SECONDS,
+            tuple(row.model_copy(deep=True) for row in sorted_rows),
+        )
+        return sorted_rows
 
     def get_patient(self, patient_id: str, event_limit: int = 100) -> PatientDetail | None:
         """Read one active owned root and its independent EHR and IoT streams."""
@@ -269,6 +302,7 @@ class PatientRepository:
         batch.create(rule_reference, rule_document)
         batch.create(prediction_reference, prediction_document)
         batch.commit()
+        self._dashboard_cache.clear()
         return result_id
 
     def get_existing_clinical_results(
@@ -358,12 +392,21 @@ class PatientRepository:
         active = self._load_active_cohort()
         if active is None:
             return []
+        return self._list_clinical_result_payloads_for_active(
+            active, patient_id, limit, collection, result_type, order_field
+        )
+
+    def _list_clinical_result_payloads_for_active(
+        self,
+        active: _ActiveCohort,
+        patient_id: str,
+        limit: int,
+        collection: str,
+        result_type: str,
+        order_field: str,
+    ) -> list[dict[str, object]]:
         bounded_limit = min(max(limit, 1), MAX_CLINICAL_RESULT_RECORDS)
         patient_document = self._cohort_document(active.cohort_id).collection("patients").document(patient_id)
-        root_data = patient_document.get().to_dict()
-        if root_data is None:
-            return []
-        self._summary_from_data(root_data, active)
         snapshots = (
             patient_document.collection(collection)
             .order_by(order_field, direction="DESCENDING")
@@ -417,6 +460,7 @@ class PatientRepository:
         if active.manifest_checksum != checksum:
             raise ValueError("staged cohort checksum does not match the generated manifest")
         self._activate(active)
+        self._dashboard_cache.clear()
         return SeedResult(
             cohort_id=cohort_id,
             patient_count=active.patient_count,
