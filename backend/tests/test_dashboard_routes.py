@@ -2,6 +2,7 @@ from datetime import UTC, datetime
 
 import pytest
 from fastapi.testclient import TestClient
+from google.api_core.exceptions import ResourceExhausted
 
 from app import auth as auth_module
 from app.clinical_rules import ClinicalRuleResult
@@ -162,3 +163,22 @@ def test_dashboard_returns_honest_empty_cohort(monkeypatch: pytest.MonkeyPatch, 
     response = client.get("/dashboard/patients", headers={"Authorization": "Bearer valid"})
     assert response.status_code == 200
     assert response.json() == []
+
+
+def test_dashboard_reports_firestore_quota_as_temporarily_unavailable(
+    monkeypatch: pytest.MonkeyPatch,
+    route_repository: RouteRepository,
+) -> None:
+    def quota_exhausted(_limit: int) -> list[object]:
+        raise ResourceExhausted("Quota exceeded.")
+
+    route_repository.list_dashboard_patients = quota_exhausted  # type: ignore[method-assign]
+    monkeypatch.setattr(auth_module, "verify_firebase_token", lambda _token: {"uid": "doctor", "role": "doctor"})
+
+    response = client.get("/dashboard/patients", headers={"Authorization": "Bearer valid"})
+
+    assert response.status_code == 503
+    assert response.json() == {
+        "detail": "Patient data is temporarily unavailable because the Firestore quota is exhausted. Please retry later."
+    }
+    assert response.headers["retry-after"] == "300"

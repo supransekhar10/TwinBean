@@ -62,7 +62,18 @@ describe("fetchDoctorDashboard", () => {
     expect(fetchMock).toHaveBeenCalledWith("http://localhost:8000/dashboard/patients?limit=100", { headers: { Authorization: "Bearer doctor-token" } });
   });
   it("preserves authorization status without exposing backend payloads", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 403 }));
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 403, json: async () => null }));
     await expect(fetchDoctorDashboard("wrong-role")).rejects.toMatchObject({ status: 403, message: "Patient dashboard could not be loaded." } satisfies Partial<ApiError>);
+  });
+  it("surfaces a safe datastore availability message", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: false,
+      status: 503,
+      json: async () => ({ detail: "Patient data is temporarily unavailable because the Firestore quota is exhausted. Please retry later." }),
+    }));
+    await expect(fetchDoctorDashboard("doctor-token")).rejects.toMatchObject({
+      status: 503,
+      message: "Patient data is temporarily unavailable because the Firestore quota is exhausted. Please retry later.",
+    } satisfies Partial<ApiError>);
   });
 });

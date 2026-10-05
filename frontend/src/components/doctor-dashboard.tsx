@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { DashboardPatient } from "@/lib/api";
 
-type DashboardProps = { rows: DashboardPatient[]; loading?: boolean; error?: "general" | "unauthorized"; onRetry?: () => void };
+type DashboardProps = { rows: DashboardPatient[]; loading?: boolean; error?: "general" | "unauthorized" | "unavailable"; onRetry?: () => void };
 const ruleLabels = { criteria_met: "Criteria met", criteria_not_met: "Criteria not met", insufficient_creatinine_history: "Insufficient creatinine history" };
 const warningLabels: Record<string, string> = { iot_data_stale: "Simulated IoT data is stale.", iot_data_missing: "Simulated IoT data is missing.", missing_iot_window: "A complete simulated IoT window is unavailable.", no_stored_prediction: "No valid stored prediction is available.", model_engine_unavailable: "The research prediction model is unavailable." };
 
@@ -30,7 +30,14 @@ function PatientFacts({ row }: { row: DashboardPatient }) {
 
 export function DoctorDashboard({ rows, loading = false, error, onRetry }: DashboardProps) {
   if (loading) return <section className="dashboard-state" aria-live="polite"><h2>Loading monitored patients...</h2><div className="dashboard-skeleton" aria-hidden="true" /></section>;
-  if (error) return <section className="dashboard-state" role="alert"><h2>{error === "unauthorized" ? "Doctor access is required" : "Patient dashboard could not be loaded"}</h2><p>{error === "unauthorized" ? "Sign out and sign in with an approved doctor account, then refresh the role token." : "Check the backend connection and retry."}</p>{onRetry && <button className="secondary-button" onClick={onRetry} type="button">Retry dashboard</button>}</section>;
+  if (error) {
+    const content = error === "unauthorized"
+      ? ["Doctor access is required", "Sign out and sign in with an approved doctor account, then refresh the role token."]
+      : error === "unavailable"
+        ? ["Patient data is temporarily unavailable", "The Firestore quota is exhausted. Your doctor access is still valid; retry after the quota resets."]
+        : ["Patient dashboard could not be loaded", "Check the backend connection and retry."];
+    return <section className="dashboard-state" role="alert"><h2>{content[0]}</h2><p>{content[1]}</p>{onRetry && <button className="secondary-button" onClick={onRetry} type="button">Retry dashboard</button>}</section>;
+  }
   if (!rows.length) return <section className="dashboard-state"><h2>No monitored patients available</h2><p>No synthetic patients are in the active cohort. Refresh the dashboard or ask the prototype administrator to confirm the cohort.</p>{onRetry && <button className="secondary-button" onClick={onRetry} type="button">Refresh dashboard</button>}</section>;
   return <section className="dashboard" aria-labelledby="patient-list-heading">
     <div className="dashboard-heading"><div><p className="context-label">Active synthetic cohort</p><h2 id="patient-list-heading">Risk-prioritized monitored patients</h2><p>Valid forecasts are ordered by highest predicted 24-hour AKI risk. Every monitored patient remains accessible.</p></div><strong aria-live="polite">{rows.length} monitored {rows.length === 1 ? "patient" : "patients"}</strong></div>

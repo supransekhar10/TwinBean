@@ -24,4 +24,10 @@ describe("DoctorDashboard", () => {
     expect(html).toContain("No valid stored prediction is available.");
     expect(html).not.toContain("0%");
   });
+  it("distinguishes temporary patient-data unavailability from authorization failure", () => {
+    const html = renderToStaticMarkup(<DoctorDashboard rows={[]} error="unavailable" />);
+    expect(html).toContain("Patient data is temporarily unavailable");
+    expect(html).toContain("Firestore quota");
+    expect(html).not.toContain("Doctor access is required");
+  });
 });

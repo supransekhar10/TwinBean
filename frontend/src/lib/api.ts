@@ -55,7 +55,7 @@ export async function fetchDoctorHealth(idToken: string): Promise<DoctorHealth> 
 
   if (!response.ok) {
     const body = (await response.json().catch(() => null)) as { detail?: string } | null;
-    throw new Error(body?.detail ?? `Health check failed (${response.status}).`);
+    throw new ApiError(response.status, body?.detail ?? `Health check failed (${response.status}).`);
   }
 
   return response.json() as Promise<DoctorHealth>;
@@ -65,7 +65,10 @@ export async function fetchDoctorDashboard(idToken: string): Promise<DashboardPa
   const response = await fetch(`${apiBaseUrl}/dashboard/patients?limit=100`, {
     headers: { Authorization: `Bearer ${idToken}` },
   });
-  if (!response.ok) throw new ApiError(response.status, "Patient dashboard could not be loaded.");
+  if (!response.ok) {
+    const body = (await response.json().catch(() => null)) as { detail?: string } | null;
+    throw new ApiError(response.status, body?.detail ?? "Patient dashboard could not be loaded.");
+  }
   return response.json() as Promise<DashboardPatient[]>;
 }
 

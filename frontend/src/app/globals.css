@@ -234,6 +234,10 @@ h2 {
 button:disabled { cursor: wait; opacity: 0.62; transform: none; }
 
 .form-note { margin: 0.8rem 0 0; text-align: center; line-height: 1.4; }
+.login-heading { margin-bottom: 1.75rem; }
+.login-heading h2 { font-size: clamp(1.75rem, 3vw, 2.35rem); }
+.login-heading > p:last-child { margin: 0.65rem 0 0; color: var(--muted); line-height: 1.5; }
+.login-card { width: 100%; max-width: 440px; justify-self: end; }
 .error-message { margin: 0 0 1rem; padding: 0.8rem; border-radius: 9px; color: var(--danger); background: var(--danger-soft); font-size: 0.84rem; line-height: 1.45; }
 
 .identity-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 0 0 1.5rem; }
@@ -300,6 +304,15 @@ button:disabled { cursor: wait; opacity: 0.62; transform: none; }
 .dashboard-state p { color: var(--muted); }
 .dashboard-skeleton { height: 180px; border-radius: 10px; background: linear-gradient(#eef2f0 31px, transparent 31px 48px, #eef2f0 48px 80px, transparent 80px 97px, #eef2f0 97px 129px, transparent 129px); }
 
+.dashboard-shell { width: min(1280px, calc(100% - 3rem)); min-height: 100svh; margin: 0 auto; padding-bottom: 4rem; }
+.dashboard-bar { min-height: 72px; display: flex; align-items: center; justify-content: space-between; gap: 1.5rem; border-bottom: 1px solid var(--line); }
+.account-menu { display: flex; align-items: center; gap: 0.75rem; min-width: 0; }
+.account-menu > span { max-width: 280px; overflow: hidden; color: var(--muted); font-size: 0.875rem; text-overflow: ellipsis; white-space: nowrap; }
+.dashboard-intro { display: flex; align-items: end; justify-content: space-between; gap: 2rem; padding: clamp(2.5rem, 5vw, 4.5rem) 0 2rem; }
+.dashboard-intro h1 { max-width: none; margin-bottom: 0.65rem; font-size: clamp(2.5rem, 5vw, 4.5rem); }
+.dashboard-intro p:not(.context-label) { max-width: 65ch; margin: 0; color: var(--muted); line-height: 1.55; }
+.dashboard-shell > .dashboard { padding-top: 2rem; }
+
 .page-footer {
   min-height: 60px;
   border-top: 1px solid var(--line);
@@ -356,6 +369,12 @@ button:disabled { cursor: wait; opacity: 0.62; transform: none; }
   .mobile-dashboard .open-patient { width: 100%; }
   .dashboard { padding-top: 1.5rem; }
   .dashboard-state { padding: 1rem; }
+  .login-card { justify-self: stretch; }
+  .dashboard-shell { width: min(100% - 2rem, 1280px); }
+  .dashboard-bar { align-items: flex-start; padding: 1rem 0; }
+  .account-menu { align-items: flex-end; flex-direction: column; gap: 0.25rem; }
+  .account-menu > span { max-width: 160px; }
+  .dashboard-intro { display: grid; gap: 1rem; padding-top: 2.5rem; }
 }
 
 @media (prefers-reduced-motion: reduce) {
