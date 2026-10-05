@@ -32,11 +32,11 @@
 
 ### Doctor Dashboard
 
-- [ ] **DASH-01**: Doctor can view all monitored synthetic patients in one dashboard.
-- [ ] **DASH-02**: Dashboard defaults to patients with valid predictions ordered from highest to lowest predicted 24-hour AKI risk.
-- [ ] **DASH-03**: Patients without a valid prediction remain accessible and display “Risk unavailable” rather than a zero-risk score.
-- [ ] **DASH-04**: Dashboard displays each prediction's generation time.
-- [ ] **DASH-05**: Dashboard warns when required patient or IoT data is missing or stale.
+- [x] **DASH-01**: Doctor can view all monitored synthetic patients in one dashboard.
+- [x] **DASH-02**: Dashboard defaults to patients with valid predictions ordered from highest to lowest predicted 24-hour AKI risk.
+- [x] **DASH-03**: Patients without a valid prediction remain accessible and display “Risk unavailable” rather than a zero-risk score.
+- [x] **DASH-04**: Dashboard displays each prediction's generation time.
+- [x] **DASH-05**: Dashboard warns when required patient or IoT data is missing or stale.
 
 ### Patient Detail
 
@@ -111,11 +111,11 @@
 | FIRE-03 | Phase 1 | Complete |
 | FIRE-04 | Phase 1 | Complete |
 | FIRE-05 | Phase 2 | Complete |
-| DASH-01 | Phase 4 | Pending |
-| DASH-02 | Phase 4 | Pending |
-| DASH-03 | Phase 4 | Pending |
-| DASH-04 | Phase 4 | Pending |
-| DASH-05 | Phase 4 | Pending |
+| DASH-01 | Phase 4 | Complete |
+| DASH-02 | Phase 4 | Complete |
+| DASH-03 | Phase 4 | Complete |
+| DASH-04 | Phase 4 | Complete |
+| DASH-05 | Phase 4 | Complete |
 | PAT-01 | Phase 5 | Pending |
 | PAT-02 | Phase 5 | Pending |
 | PAT-03 | Phase 5 | Pending |
