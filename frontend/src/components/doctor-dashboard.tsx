@@ -3,7 +3,7 @@ import type { DashboardPatient } from "@/lib/api";
 
 type DashboardProps = { rows: DashboardPatient[]; loading?: boolean; error?: "general" | "unauthorized" | "unavailable"; onRetry?: () => void };
 const ruleLabels = { criteria_met: "Criteria met", criteria_not_met: "Criteria not met", insufficient_creatinine_history: "Insufficient creatinine history" };
-const warningLabels: Record<string, string> = { iot_data_stale: "Simulated IoT data is stale.", iot_data_missing: "Simulated IoT data is missing.", missing_iot_window: "A complete simulated IoT window is unavailable.", no_stored_prediction: "No valid stored prediction is available.", model_engine_unavailable: "The research prediction model is unavailable." };
+const warningLabels: Record<string, string> = { iot_data_stale: "Simulated IoT data is stale.", iot_data_missing: "Simulated IoT data is missing.", missing_iot_window: "A complete simulated IoT window is unavailable.", no_stored_prediction: "No valid stored prediction is available.", model_engine_unavailable: "The research prediction model is unavailable.", local_snapshot_fallback: "Local synthetic fallback; refresh Firestore when available." };
 
 function warningText(row: DashboardPatient): string | null {
   const codes = [...row.prediction.warnings, ...(row.prediction.status === "unavailable" ? row.prediction.reasons : [])];

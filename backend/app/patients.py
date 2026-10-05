@@ -13,6 +13,7 @@ from pathlib import Path
 from time import monotonic
 from typing import Annotated, Any, Literal, Mapping
 
+from google.api_core.retry import Retry
 from pydantic import BaseModel, ConfigDict, Field
 
 from .firestore import get_firestore_client
@@ -30,7 +31,10 @@ DASHBOARD_CACHE_TTL_SECONDS = 300.0
 FIRESTORE_READ_TIMEOUT_SECONDS = 3.0
 # Interactive reads fail fast. The UI owns retry so SDK-level retries cannot
 # leave clinicians staring at an indefinite loading state.
-_FIRESTORE_READ_RETRY = None
+_FIRESTORE_READ_RETRY = Retry(
+    predicate=lambda _error: False,
+    deadline=FIRESTORE_READ_TIMEOUT_SECONDS,
+)
 COHORTS_COLLECTION = "twinbean_cohorts"
 ACTIVE_COHORT_PATH = "twinbean_metadata/active_cohort"
 _PATIENT_ID = re.compile(r"^tbp-[0-9a-f]{32}$")

@@ -16,7 +16,7 @@ function formatTime(value: string) { return new Intl.DateTimeFormat("en", { date
 function latestWarning(prediction: AkiPrediction | null) {
   if (!prediction) return "No stored prediction is available.";
   const code = prediction.warnings[0] ?? (prediction.status === "unavailable" ? prediction.reasons[0] : null);
-  const known: Record<string, string> = { stale_ehr_observation: "EHR data is stale.", stale_iot_observation: "Simulated IoT data is stale.", missing_iot_observation: "Simulated IoT data is missing.", no_stored_prediction: "No stored prediction is available." };
+  const known: Record<string, string> = { stale_ehr_observation: "EHR data is stale.", stale_iot_observation: "Simulated IoT data is stale.", missing_iot_observation: "Simulated IoT data is missing.", no_stored_prediction: "No stored prediction is available.", local_snapshot_fallback: "Local synthetic fallback; refresh Firestore when available." };
   return code ? known[code] ?? "Prediction data needs review." : null;
 }
 
