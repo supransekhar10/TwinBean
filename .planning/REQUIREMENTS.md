@@ -59,12 +59,12 @@
 
 ### Evaluation
 
-- [ ] **EVAL-01**: Researcher can review an evaluation report generated from actual model runs on synthetic held-out data.
-- [ ] **EVAL-02**: Evaluation report identifies dataset construction, split strategy, metrics, and limitations.
-- [ ] **EVAL-03**: Evaluation report contains no invented or placeholder performance claims presented as results.
-- [ ] **EVAL-04**: Model evaluation uses patient-level splits so records from one simulated patient cannot appear across training and held-out sets.
-- [ ] **EVAL-05**: Feature construction and evaluation prevent future observations from leaking into an earlier prediction time.
-- [ ] **EVAL-06**: Evaluation compares an EHR-history-only model with a combined EHR-history-plus-IoT-stream model on the same held-out patients.
+- [x] **EVAL-01**: Researcher can review an evaluation report generated from actual model runs on synthetic held-out data.
+- [x] **EVAL-02**: Evaluation report identifies dataset construction, split strategy, metrics, and limitations.
+- [x] **EVAL-03**: Evaluation report contains no invented or placeholder performance claims presented as results.
+- [x] **EVAL-04**: Model evaluation uses patient-level splits so records from one simulated patient cannot appear across training and held-out sets.
+- [x] **EVAL-05**: Feature construction and evaluation prevent future observations from leaking into an earlier prediction time.
+- [x] **EVAL-06**: Evaluation compares an EHR-history-only model with a combined EHR-history-plus-IoT-stream model on the same held-out patients.
 
 ## v2 Requirements
 
@@ -129,12 +129,12 @@
 | PRED-03 | Phase 3 | Complete |
 | PRED-04 | Phase 3 | Complete |
 | PRED-05 | Phase 3 | Complete |
-| EVAL-01 | Phase 6 | Pending |
-| EVAL-02 | Phase 6 | Pending |
-| EVAL-03 | Phase 6 | Pending |
-| EVAL-04 | Phase 6 | Pending |
-| EVAL-05 | Phase 6 | Pending |
-| EVAL-06 | Phase 6 | Pending |
+| EVAL-01 | Phase 6 | Complete |
+| EVAL-02 | Phase 6 | Complete |
+| EVAL-03 | Phase 6 | Complete |
+| EVAL-04 | Phase 6 | Complete |
+| EVAL-05 | Phase 6 | Complete |
+| EVAL-06 | Phase 6 | Complete |
 
 **Coverage:**
 - v1 requirements: 40 total
