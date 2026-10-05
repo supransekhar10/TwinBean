@@ -1,0 +1,63 @@
+{
+  "clinical_validation": false,
+  "dataset": {
+    "cohort_sha256": "805e42fe1394afc8b31a59ec2778b358b671bb516e8e43e197994a9032002f03",
+    "generator": "TwinBean deterministic synthetic generator (not Synthea)",
+    "negative_labels": 40,
+    "patient_count": 80,
+    "positive_labels": 40,
+    "prediction_cutoff": "2026-10-04T00:00:00Z",
+    "seed": 20261005
+  },
+  "generated_at": "2026-10-05T01:01:51.551103Z",
+  "leakage_checks": {
+    "features_filtered_at_or_before_cutoff": true,
+    "labels_use_open_next_24h_window": true,
+    "patient_ids_excluded_from_features": true
+  },
+  "limitations": [
+    "Synthetic data evaluation is not clinical validation.",
+    "The deterministic generator has simplified trajectories and does not represent real prevalence or care processes.",
+    "The 0.5 accuracy threshold is descriptive only and is not a clinical decision threshold."
+  ],
+  "models": {
+    "combined_ehr_iot": {
+      "features": [
+        "age_years",
+        "latest_creatinine_mg_dl",
+        "creatinine_delta_48h_mg_dl",
+        "latest_systolic_bp_mmhg"
+      ],
+      "metrics": {
+        "accuracy_at_0_5": 0.5,
+        "average_precision": 0.628915,
+        "brier_score": 0.296743,
+        "log_loss": 0.806445,
+        "roc_auc": 0.51
+      }
+    },
+    "ehr_only": {
+      "features": [
+        "age_years",
+        "latest_creatinine_mg_dl",
+        "creatinine_delta_48h_mg_dl"
+      ],
+      "metrics": {
+        "accuracy_at_0_5": 0.55,
+        "average_precision": 0.596142,
+        "brier_score": 0.265317,
+        "log_loss": 0.743502,
+        "roc_auc": 0.605
+      }
+    }
+  },
+  "report_version": "twinbean-synthetic-evaluation-v1",
+  "split": {
+    "held_out_patients": 20,
+    "patient_overlap": 0,
+    "same_held_out_patients_for_both_models": true,
+    "strategy": "deterministic stratified patient-level holdout",
+    "train_patients": 60
+  },
+  "synthetic_data_only": true
+}

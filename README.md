@@ -1,6 +1,6 @@
 # TwinBean
 
-TwinBean is a synthetic-data kidney digital twin research prototype for doctors and nephrologists. This milestone provides the Next.js and FastAPI skeletons, Firebase email/password sign-in, doctor-claim authorization, and public/protected health checks.
+TwinBean is a synthetic-data kidney digital twin research prototype for doctors and nephrologists. It provides Firebase doctor access, a risk-ranked dashboard, patient-level EHR and simulated IoT trends, separated clinical-rule and future-risk results, SHAP explanations, and reproducible synthetic model evaluation.
 
 Not for clinical use. Do not use real patient data.
 
@@ -27,6 +27,19 @@ Not for clinical use. Do not use real patient data.
    ```
 
 Open `http://localhost:3000`. The public API health check is `http://localhost:8000/health/live`; `/health/authenticated` requires a current Firebase ID token with `role: doctor`.
+
+The dashboard loads only after the protected doctor health check succeeds. Patient pages reuse doctor-protected backend endpoints; Firebase service credentials remain backend-only.
+
+## Synthetic model evaluation
+
+Run the actual patient-level, time-safe EHR-only versus combined-stream comparison:
+
+```powershell
+cd backend
+.\.venv\Scripts\python.exe -m scripts.evaluate_models
+```
+
+Results are written to `backend/artifacts/evals/phase6-model-evaluation.json` and `docs/MODEL_EVALUATION.md`. These are synthetic-data research results, not clinical validation.
 
 ## Verification
 
