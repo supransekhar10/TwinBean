@@ -320,23 +320,33 @@ class PatientRepository:
         return detail
 
     def list_review_notes(self, patient_id: str, limit: int = 20) -> list[ReviewNote]:
-        active = self._load_active_cohort()
-        if active is None or self._get_patient_for_active(active, patient_id, 1) is None:
+        if not self._is_known_patient(patient_id):
             return []
-        snapshots = self._client.document(_patient_path(active.cohort_id, patient_id)).collection("review_notes").order_by("created_at").limit(min(max(limit, 1), 50)).stream(retry=_FIRESTORE_READ_RETRY, timeout=FIRESTORE_READ_TIMEOUT_SECONDS)
+        snapshots = self._client.document(f"twinbean_doctor_reviews/{patient_id}").collection("notes").order_by("created_at").limit(min(max(limit, 1), 50)).stream(retry=_FIRESTORE_READ_RETRY, timeout=FIRESTORE_READ_TIMEOUT_SECONDS)
         notes = [ReviewNote.model_validate(snapshot.to_dict() or {}) for snapshot in snapshots]
         return list(reversed(notes))
 
     def create_review_note(self, patient_id: str, author_uid: str, text: str) -> ReviewNote | None:
-        active = self._load_active_cohort()
-        if active is None or self._get_patient_for_active(active, patient_id, 1) is None:
+        if not self._is_known_patient(patient_id):
             return None
         note = ReviewNote(note_id=f"note-{uuid.uuid4().hex}", patient_id=patient_id, author_uid=author_uid, text=text, created_at=datetime.now(UTC))
         batch = self._client.batch()
-        document = self._client.document(_patient_path(active.cohort_id, patient_id)).collection("review_notes").document(note.note_id)
+        document = self._client.document(f"twinbean_doctor_reviews/{patient_id}").collection("notes").document(note.note_id)
         batch.set(document, note.model_dump(mode="python"))
         batch.commit()
         return note
+
+    def _is_known_patient(self, patient_id: str) -> bool:
+        if not _PATIENT_ID.fullmatch(patient_id):
+            return False
+        if self._disk_cache_enabled:
+            cache_dir = Path(__file__).resolve().parents[1] / ".cache"
+            for path in cache_dir.glob(f"patient-{patient_id}-detail-*.json"):
+                cached = self._read_cache_json(path)
+                if cached is not None and PatientDetail.model_validate(cached).patient.patient_id == patient_id:
+                    return True
+        active = self._load_active_cohort_descriptor()
+        return active is not None and self._get_patient_for_active(active, patient_id, 1) is not None
 
     def get_clinical_context(self, patient_id: str) -> ClinicalContext | None:
         """Resolve one patient from the validated active immutable cohort only."""
@@ -624,6 +634,21 @@ class PatientRepository:
         active = _active_from_data(pointer)
         staged = self._validate_staged_cohort(active.cohort_id)
         if staged != active:
+            raise ValueError("active cohort pointer does not exactly match its validated cohort")
+        return active
+
+    def _load_active_cohort_descriptor(self) -> _ActiveCohort | None:
+        """Verify the activated immutable descriptor without rescanning the full cohort."""
+        pointer = self._client.document(ACTIVE_COHORT_PATH).get(
+            retry=_FIRESTORE_READ_RETRY, timeout=FIRESTORE_READ_TIMEOUT_SECONDS
+        ).to_dict()
+        if pointer is None:
+            return None
+        active = _active_from_data(pointer)
+        descriptor = self._cohort_document(active.cohort_id).get(
+            retry=_FIRESTORE_READ_RETRY, timeout=FIRESTORE_READ_TIMEOUT_SECONDS
+        ).to_dict()
+        if _active_from_data(descriptor or {}) != active:
             raise ValueError("active cohort pointer does not exactly match its validated cohort")
         return active
 
