@@ -4,10 +4,10 @@ current_phase: 07
 current_plan: 01
 status: verifying
 stopped_at: Phase 07 implementation complete; live Firestore refresh pending
-last_updated: "2026-10-06T11:45:30.064Z"
+last_updated: "2026-10-06T11:49:44.870Z"
 last_activity: 2026-10-05
 last_activity_desc: Completed quick task 261005-wrm dashboard triage refinements
-state_head: 59b52b6ec32a6a51f32b6563c2a5e0f21ab523db
+state_head: 9258712a22e642336d3c2d0c754be21622bf1e83
 progress:
   total_phases: 7
   completed_phases: 6
@@ -113,6 +113,7 @@ None.
 | 261006-nnj | Add Firestore-backed doctor review notes, review workspace navigation, and accessible overview count-up animation | 2026-10-06 | dde2a84 | [261006-nnj-add-firestore-backed-doctor-review-notes](./quick/261006-nnj-add-firestore-backed-doctor-review-notes/) |
 | 261006-nti | Fix patient loading, move refresh to sidebar only, and improve login page with logo and clinical context | 2026-10-06 | eb22c45 | [261006-nti-fix-patient-loading-move-refresh-to-side](./quick/261006-nti-fix-patient-loading-move-refresh-to-side/) |
 | 261006-nx6 | Make sign-in page full-width, remove duplicate logo, and improve informative clinical composition | 2026-10-06 | 59b52b6 | [261006-nx6-make-sign-in-page-full-width-remove-dupl](./quick/261006-nx6-make-sign-in-page-full-width-remove-dupl/) |
+| 261006-o1z | Fix Firestore doctor review note persistence for cached synthetic patients | 2026-10-06 | 9258712 | [261006-o1z-fix-firestore-doctor-review-note-persist](./quick/261006-o1z-fix-firestore-doctor-review-note-persist/) |
 
 ## Deferred Items
 
