@@ -4,10 +4,10 @@ current_phase: 07
 current_plan: 01
 status: verifying
 stopped_at: Phase 07 implementation complete; live Firestore refresh pending
-last_updated: "2026-10-06T11:49:44.870Z"
+last_updated: "2026-10-06T11:51:31.771Z"
 last_activity: 2026-10-05
 last_activity_desc: Completed quick task 261005-wrm dashboard triage refinements
-state_head: 9258712a22e642336d3c2d0c754be21622bf1e83
+state_head: 8027c607dcaab819b4fcfc3113ed9e8e389e4f50
 progress:
   total_phases: 7
   completed_phases: 6
@@ -114,6 +114,7 @@ None.
 | 261006-nti | Fix patient loading, move refresh to sidebar only, and improve login page with logo and clinical context | 2026-10-06 | eb22c45 | [261006-nti-fix-patient-loading-move-refresh-to-side](./quick/261006-nti-fix-patient-loading-move-refresh-to-side/) |
 | 261006-nx6 | Make sign-in page full-width, remove duplicate logo, and improve informative clinical composition | 2026-10-06 | 59b52b6 | [261006-nx6-make-sign-in-page-full-width-remove-dupl](./quick/261006-nx6-make-sign-in-page-full-width-remove-dupl/) |
 | 261006-o1z | Fix Firestore doctor review note persistence for cached synthetic patients | 2026-10-06 | 9258712 | [261006-o1z-fix-firestore-doctor-review-note-persist](./quick/261006-o1z-fix-firestore-doctor-review-note-persist/) |
+| 261006-o2q | Remove dashboard alert control and audio behavior | 2026-10-06 | 8027c60 | [261006-o2q-remove-dashboard-alert-control-and-audio](./quick/261006-o2q-remove-dashboard-alert-control-and-audio/) |
 
 ## Deferred Items
 
