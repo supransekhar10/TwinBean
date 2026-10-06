@@ -4,10 +4,10 @@ current_phase: 07
 current_plan: 01
 status: verifying
 stopped_at: Phase 07 implementation complete; live Firestore refresh pending
-last_updated: "2026-10-06T11:29:52.515Z"
+last_updated: "2026-10-06T11:37:00.313Z"
 last_activity: 2026-10-05
 last_activity_desc: Completed quick task 261005-wrm dashboard triage refinements
-state_head: ad1572ee4f051f242be5e7acd632938dfcd99c86
+state_head: dde2a84c1f4750a9bc2ce0e5536767c365b02cf2
 progress:
   total_phases: 7
   completed_phases: 6
@@ -110,6 +110,7 @@ None.
 | 261006-n6l | Create dedicated sidebar routes and full-width clinician layouts for all authenticated pages | 2026-10-06 | 3557bca | [261006-n6l-make-every-twinbean-sidebar-destination-](./quick/261006-n6l-make-every-twinbean-sidebar-destination-/) |
 | 261006-nf7 | Fix sidebar serving, enrich overview, simplify patient history, and improve unavailable SHAP state | 2026-10-06 | cf5e824 | [261006-nf7-fix-authenticated-sidebar-rendering-enri](./quick/261006-nf7-fix-authenticated-sidebar-rendering-enri/) |
 | 261006-njd | Remove session-only synthetic patient creation completely | 2026-10-06 | ad1572e | [261006-njd-remove-session-only-synthetic-patient-cr](./quick/261006-njd-remove-session-only-synthetic-patient-cr/) |
+| 261006-nnj | Add Firestore-backed doctor review notes, review workspace navigation, and accessible overview count-up animation | 2026-10-06 | dde2a84 | [261006-nnj-add-firestore-backed-doctor-review-notes](./quick/261006-nnj-add-firestore-backed-doctor-review-notes/) |
 
 ## Deferred Items
 
