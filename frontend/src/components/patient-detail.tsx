@@ -49,7 +49,12 @@ export function PatientDetailScreen({ patientId }: { patientId: string }) {
   const [noteState, setNoteState] = useState<"idle" | "saving" | "error">("idle");
   useEffect(() => onAuthStateChanged(firebaseAuth, async (user) => {
     if (!user) { setState("unauthorized"); return; }
-    try { const token = await user.getIdToken(); setData(await fetchPatientTwin(patientId, token)); setNotes(await fetchReviewNotes(patientId, token)); setState("ready"); }
+    try {
+      const token = await user.getIdToken();
+      setData(await fetchPatientTwin(patientId, token));
+      setState("ready");
+      void fetchReviewNotes(patientId, token).then(setNotes).catch(() => setNotes([]));
+    }
     catch (error) { setState(error instanceof ApiError && (error.status === 401 || error.status === 403) ? "unauthorized" : "error"); }
   }), [patientId]);
   const content = state === "loading"

@@ -7,7 +7,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { DoctorDashboard } from "@/components/doctor-dashboard";
 import { ClinicianSidebar } from "@/components/clinician-sidebar";
-import { ApiError, fetchDoctorDashboard, fetchDoctorHealth, type DashboardPatient } from "@/lib/api";
+import { ApiError, fetchDoctorDashboard, type DashboardPatient } from "@/lib/api";
 import { firebaseAuth } from "@/lib/firebase";
 
 type DashboardState = "loading" | "ready" | "error" | "unauthorized" | "unavailable";
@@ -32,16 +32,11 @@ export function DashboardScreen({ view }: { view: DashboardView }) {
   const [user, setUser] = useState<User | null>(null);
   const [rows, setRows] = useState<DashboardPatient[]>([]);
   const [state, setState] = useState<DashboardState>("loading");
-  const [refreshing, setRefreshing] = useState(false);
 
   const loadDashboard = useCallback(async (activeUser: User, refresh = false) => {
-    if (refresh) {
-      setRefreshing(true);
-    }
-    else setState("loading");
+    if (!refresh) setState("loading");
     try {
       const token = await activeUser.getIdToken();
-      await fetchDoctorHealth(token);
       setRows(await fetchDoctorDashboard(token, refresh));
       setState("ready");
     } catch (error) {
@@ -58,8 +53,6 @@ export function DashboardScreen({ view }: { view: DashboardView }) {
               ? "unauthorized"
               : "error",
       );
-    } finally {
-      setRefreshing(false);
     }
   }, []);
 
@@ -69,7 +62,9 @@ export function DashboardScreen({ view }: { view: DashboardView }) {
       return;
     }
     setUser(activeUser);
-    void loadDashboard(activeUser);
+    const forceRefresh = sessionStorage.getItem("twinbean-force-refresh") === "1";
+    sessionStorage.removeItem("twinbean-force-refresh");
+    void loadDashboard(activeUser, forceRefresh);
   }), [loadDashboard, router]);
 
   const criteriaMet = rows.filter((row) => row.current_rule?.status === "criteria_met").length;
@@ -99,12 +94,12 @@ export function DashboardScreen({ view }: { view: DashboardView }) {
 
       {view === "reviews" && <section className="review-workspace"><div><h2>Patients awaiting review</h2><p>Open a record to add a doctor review note. Notes do not change clinical-rule or prediction outputs.</p></div><ul>{priorityPatients.map((row) => <li key={row.patient.patient_id}><div><strong>{row.patient.display_name}</strong><span>Age {row.patient.age} · CKD {row.patient.ckd_stage} · Current criteria met</span></div><Link className="primary-button" href={`/patients/${row.patient.patient_id}#review-notes`}>Review patient</Link></li>)}</ul></section>}
 
-      {view === "patients" && <><div className="page-tools"><button className="secondary-button" disabled={refreshing || !user} onClick={() => user && void loadDashboard(user, true)} type="button">{refreshing ? "Refreshing…" : "Refresh from Firestore"}</button></div><div id="monitored-patients"><DoctorDashboard
+      {view === "patients" && <div id="monitored-patients"><DoctorDashboard
         rows={rows}
         loading={state === "loading"}
         error={state === "error" ? "general" : state === "unauthorized" ? "unauthorized" : state === "unavailable" ? "unavailable" : undefined}
         onRetry={user ? () => void loadDashboard(user) : undefined}
-      /></div></>}
+      /></div>}
       </div>
     </main>
   );

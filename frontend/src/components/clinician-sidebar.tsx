@@ -24,6 +24,7 @@ export function ClinicianSidebar({ active, email }: { active: ActivePage; email?
       <Link className={`sidebar-link${active === "overview" ? " sidebar-link--active" : ""}`} href="/dashboard">Overview</Link>
       <Link className={`sidebar-link${active === "patients" ? " sidebar-link--active" : ""}`} href="/patients">Monitored patients</Link>
       <Link className={`sidebar-link${active === "reviews" ? " sidebar-link--active" : ""}`} href="/reviews">Review workspace</Link>
+      <button className="sidebar-link" onClick={() => { sessionStorage.setItem("twinbean-force-refresh", "1"); window.location.reload(); }} type="button">Refresh page</button>
     </nav>
     <div className="sidebar-account"><span>Signed in as</span><strong title={email ?? undefined}>{email ?? "Doctor account"}</strong><button className="sidebar-signout" onClick={handleSignOut} type="button">Sign out</button></div>
   </aside>;

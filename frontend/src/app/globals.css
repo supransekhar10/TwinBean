@@ -87,6 +87,7 @@ button, a, input {
   font-size: 0.72rem;
   letter-spacing: 0.04em;
 }
+.login-wordmark-logo { width: 42px; height: 42px; object-fit: contain; }
 
 .prototype-label,
 .page-footer,
@@ -153,6 +154,14 @@ h2 {
   font-size: clamp(1rem, 1.4vw, 1.15rem);
   line-height: 1.65;
 }
+.login-hero-brand { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.25rem; }
+.login-hero-brand img { width: clamp(72px, 8vw, 108px); height: auto; object-fit: contain; }
+.login-hero-brand div { display: grid; gap: .25rem; }
+.login-hero-brand span { color: var(--muted); font-size: .78rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.login-hero-brand strong { font-size: 1.05rem; }
+.login-capabilities { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 1rem; margin-top: 1.5rem; }
+.login-capabilities > div { display: grid; gap: .35rem; padding-top: .9rem; border-top: 1px solid var(--line); }
+.login-capabilities span { color: var(--muted); font-size: .8rem; line-height: 1.45; }
 
 .boundary-list {
   border-top: 1px solid var(--line);
@@ -415,6 +424,7 @@ button:disabled { cursor: wait; opacity: 0.62; transform: none; }
     text-align: right;
   }
   .content-grid { padding: 2.5rem 0; }
+  .login-capabilities { grid-template-columns: 1fr; }
   h1 { font-size: 2.65rem; }
   .panel-heading { display: block; }
   .status-chip { display: inline-block; margin-top: 1rem; }
