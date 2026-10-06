@@ -105,6 +105,7 @@ class DashboardPatient(BaseModel):
     patient: PatientSummary
     current_rule: DashboardClinicalRuleSummary | None
     prediction: DashboardPredictionSummary
+    latest_review_at: datetime | None = None
 
 
 class ReviewNote(BaseModel):
@@ -203,6 +204,7 @@ class PatientRepository:
         if active is None:
             return []
         rows: list[DashboardPatient] = []
+        review_statuses = self._load_review_statuses()
         for patient in self._list_patients_for_active(active, bounded_limit):
             rules = [
                 ClinicalRuleResult.model_validate(payload)
@@ -243,7 +245,7 @@ class PatientRepository:
                     generated_at=stored.generated_at, reasons=stored.reasons,
                     warnings=stored.warnings,
                 )
-            rows.append(DashboardPatient(patient=patient, current_rule=current_rule, prediction=prediction))
+            rows.append(DashboardPatient(patient=patient, current_rule=current_rule, prediction=prediction, latest_review_at=review_statuses.get(patient.patient_id)))
         sorted_rows = sorted(rows, key=_dashboard_sort_key)
         if self._disk_cache_enabled:
             self._store_dashboard_disk_cache(bounded_limit, sorted_rows)
@@ -319,6 +321,20 @@ class PatientRepository:
             self._write_cache_json(cache_path, detail.model_dump(mode="json"))
         return detail
 
+    def _load_review_statuses(self) -> dict[str, datetime]:
+        client = getattr(self, "_client", None)
+        if client is None:
+            return {}
+        snapshots = client.collection("twinbean_doctor_reviews").stream(retry=_FIRESTORE_READ_RETRY, timeout=FIRESTORE_READ_TIMEOUT_SECONDS)
+        statuses: dict[str, datetime] = {}
+        for snapshot in snapshots:
+            payload = snapshot.to_dict() or {}
+            patient_id = payload.get("patient_id")
+            latest_review_at = payload.get("latest_review_at")
+            if isinstance(patient_id, str) and isinstance(latest_review_at, datetime):
+                statuses[patient_id] = latest_review_at
+        return statuses
+
     def list_review_notes(self, patient_id: str, limit: int = 20) -> list[ReviewNote]:
         if not self._is_known_patient(patient_id):
             return []
@@ -331,10 +347,34 @@ class PatientRepository:
             return None
         note = ReviewNote(note_id=f"note-{uuid.uuid4().hex}", patient_id=patient_id, author_uid=author_uid, text=text, created_at=datetime.now(UTC))
         batch = self._client.batch()
-        document = self._client.document(f"twinbean_doctor_reviews/{patient_id}").collection("notes").document(note.note_id)
+        review_document = self._client.document(f"twinbean_doctor_reviews/{patient_id}")
+        document = review_document.collection("notes").document(note.note_id)
+        batch.set(review_document, {"patient_id": patient_id, "latest_review_at": note.created_at, "latest_reviewer_uid": author_uid})
         batch.set(document, note.model_dump(mode="python"))
         batch.commit()
+        self._mark_patient_reviewed(patient_id, note.created_at)
         return note
+
+    def _mark_patient_reviewed(self, patient_id: str, reviewed_at: datetime) -> None:
+        for limit, (expires_at, rows) in list(self._dashboard_cache.items()):
+            updated = tuple(row.model_copy(update={"latest_review_at": reviewed_at}) if row.patient.patient_id == patient_id else row for row in rows)
+            self._dashboard_cache[limit] = (expires_at, updated)
+        if not self._disk_cache_enabled:
+            return
+        cache_dir = Path(__file__).resolve().parents[1] / ".cache"
+        for path in cache_dir.glob("dashboard-*.json"):
+            try:
+                payload = json.loads(path.read_text(encoding="utf-8"))
+                rows = [DashboardPatient.model_validate(item) for item in payload["rows"]]
+            except (KeyError, TypeError, ValueError, json.JSONDecodeError):
+                continue
+            changed = False
+            for index, row in enumerate(rows):
+                if row.patient.patient_id == patient_id:
+                    rows[index] = row.model_copy(update={"latest_review_at": reviewed_at})
+                    changed = True
+            if changed:
+                self._store_dashboard_disk_cache(int(path.stem.split("-")[-1]), rows)
 
     def _is_known_patient(self, patient_id: str) -> bool:
         if not _PATIENT_ID.fullmatch(patient_id):

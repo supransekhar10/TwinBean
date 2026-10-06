@@ -8,6 +8,11 @@ const rows: DashboardPatient[] = [
   { patient: { patient_id: "tbp-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", display_name: "Unavailable", age: 63, ckd_stage: "G3b" }, current_rule: null, prediction: { status: "unavailable", generated_at: null, reasons: ["no_stored_prediction"], warnings: [] } },
 ];
 
+const reviewedRow: DashboardPatient = {
+  ...rows[0],
+  latest_review_at: "2026-10-06T10:01:00Z",
+};
+
 describe("DoctorDashboard", () => {
   it("keeps current rules and future risk visibly separate", () => {
     const html = renderToStaticMarkup(<DoctorDashboard rows={rows} />);
@@ -27,6 +32,11 @@ describe("DoctorDashboard", () => {
     expect(html).toContain("Risk unavailable");
     expect(html).not.toContain("Data quality");
     expect(html).not.toContain("0%");
+  });
+  it("shows reviewed instead of review now after a saved doctor note", () => {
+    const html = renderToStaticMarkup(<DoctorDashboard rows={[reviewedRow]} />);
+    expect(html).toContain("Reviewed");
+    expect(html).not.toContain("Review now");
   });
   it("distinguishes temporary patient-data unavailability from authorization failure", () => {
     const html = renderToStaticMarkup(<DoctorDashboard rows={[]} error="unavailable" />);

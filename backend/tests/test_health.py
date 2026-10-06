@@ -20,6 +20,20 @@ def test_authenticated_health_requires_token() -> None:
     assert response.status_code == 401
 
 
+def test_cors_preflight_allows_review_note_post_from_frontend() -> None:
+    response = client.options(
+        "/patients/tbp-11117e11ec4f5392b8b003c66adebd17/review-notes",
+        headers={
+            "Origin": "http://localhost:3000",
+            "Access-Control-Request-Method": "POST",
+            "Access-Control-Request-Headers": "authorization,content-type",
+        },
+    )
+
+    assert response.status_code == 200
+    assert "POST" in response.headers["access-control-allow-methods"]
+
+
 def test_application_startup_does_not_import_native_ml_stack() -> None:
     command = (
         "import sys; import app.main; "

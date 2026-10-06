@@ -156,6 +156,9 @@ class FakeClient:
     def document(self, path: str) -> FakeDocument:
         return FakeDocument(self, path)
 
+    def collection(self, path: str) -> FakeCollection:
+        return FakeCollection(self, path)
+
     def batch(self) -> FakeBatch:
         return FakeBatch(self)
 
@@ -172,11 +175,26 @@ def test_repository_lists_only_bounded_ordered_root_summaries() -> None:
     assert [summary.patient_id for summary in summaries] == sorted(patient.patient_id for patient in cohort.patients)
 
 
+def test_repository_persists_review_status_with_note() -> None:
+    client_boundary = FakeClient()
+    cohort = generate_cohort(41, "2026.1", datetime(2026, 1, 15, tzinfo=UTC), patient_count=1)
+    repository = PatientRepository(client_boundary)
+    repository.write_cohort(cohort)
+    patient_id = cohort.patients[0].patient_id
+
+    note = repository.create_review_note(patient_id, "demo-doctor", "Reviewed synthetic trend.")
+
+    assert note is not None
+    status_payload = client_boundary.documents[f"twinbean_doctor_reviews/{patient_id}"]
+    assert status_payload["patient_id"] == patient_id
+    assert status_payload["latest_review_at"] == note.created_at
+    assert status_payload["latest_reviewer_uid"] == "demo-doctor"
+
+
 def test_missing_token_is_unauthorized_without_repository_access(fake_repository: FakeRepository) -> None:
     response = client.get("/patients")
     assert response.status_code == 401
     assert fake_repository.limits == []
-
 
 def test_invalid_token_is_unauthorized_without_repository_access(monkeypatch: pytest.MonkeyPatch, fake_repository: FakeRepository) -> None:
     def reject(_token: str) -> dict[str, str]:

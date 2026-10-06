@@ -319,6 +319,7 @@ button:disabled { cursor: wait; opacity: 0.62; transform: none; }
 .dashboard-controls select:focus-visible { outline: 3px solid color-mix(in srgb, var(--accent) 24%, transparent); outline-offset: 1px; border-color: var(--accent); }
 .priority { display: inline-flex; align-items: center; min-height: 28px; color: var(--muted); font-size: 0.85rem; font-weight: 700; }
 .priority--urgent { width: fit-content; padding: 0.25rem 0.55rem; border-radius: 999px; color: #7f1d1d; background: #fee2e2; }
+.priority--reviewed { width: fit-content; padding: 0.25rem 0.55rem; border-radius: 999px; color: #065f46; background: #d1fae5; }
 .desktop-dashboard .row-urgent,
 .mobile-dashboard .row-urgent { background: #fffafa; }
 .dashboard-empty { padding: 2rem; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }

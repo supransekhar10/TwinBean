@@ -151,7 +151,7 @@ def test_doctor_can_read_dashboard_without_generating_predictions(monkeypatch: p
     assert route_repository.calls == [(3, False)]
     payload = response.json()
     assert [row["patient"]["display_name"] for row in payload] == ["Zulu", "alpha", "Beta"]
-    assert set(payload[0]) == {"patient", "current_rule", "prediction"}
+    assert set(payload[0]) == {"patient", "current_rule", "prediction", "latest_review_at"}
     assert payload[0]["prediction"]["generated_at"] == CUTOFF.isoformat().replace("+00:00", "Z")
     assert payload[0]["prediction"]["warnings"] == ["iot_data_stale"]
     assert "probability" not in payload[2]["prediction"]
