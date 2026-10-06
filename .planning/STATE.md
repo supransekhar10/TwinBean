@@ -4,10 +4,9 @@ current_phase: 07
 current_plan: 01
 status: verifying
 stopped_at: Phase 07 implementation complete; live Firestore refresh pending
-last_updated: "2026-10-06T11:51:31.771Z"
+last_updated: "2026-10-06T17:03:31.928Z"
 last_activity: 2026-10-05
 last_activity_desc: Completed quick task 261005-wrm dashboard triage refinements
-state_head: 8027c607dcaab819b4fcfc3113ed9e8e389e4f50
 progress:
   total_phases: 7
   completed_phases: 6
@@ -31,7 +30,7 @@ Phase: 07
 Current Plan: 01
 Total Plans in Phase: 1
 Status: Verification pending
-Last activity: 2026-10-05 — Completed quick task 261005-wrm dashboard triage refinements
+Last activity: 2026-10-06 — Completed quick task 261006-v0q: Show Reviewed after a doctor saves a review note
 
 Progress: [█████████░] 94%
 
@@ -115,6 +114,7 @@ None.
 | 261006-nx6 | Make sign-in page full-width, remove duplicate logo, and improve informative clinical composition | 2026-10-06 | 59b52b6 | [261006-nx6-make-sign-in-page-full-width-remove-dupl](./quick/261006-nx6-make-sign-in-page-full-width-remove-dupl/) |
 | 261006-o1z | Fix Firestore doctor review note persistence for cached synthetic patients | 2026-10-06 | 9258712 | [261006-o1z-fix-firestore-doctor-review-note-persist](./quick/261006-o1z-fix-firestore-doctor-review-note-persist/) |
 | 261006-o2q | Remove dashboard alert control and audio behavior | 2026-10-06 | 8027c60 | [261006-o2q-remove-dashboard-alert-control-and-audio](./quick/261006-o2q-remove-dashboard-alert-control-and-audio/) |
+| 261006-v0q | Show Reviewed instead of Review now after a doctor saves a review note | 2026-10-06 | — | [261006-v0q-show-reviewed-instead-of-review-now-afte](./quick/261006-v0q-show-reviewed-instead-of-review-now-afte/) |
 
 ## Deferred Items
 
