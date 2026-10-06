@@ -20,6 +20,7 @@ export type DashboardPatient = {
   patient: { patient_id: string; display_name: string; age: number; sex?: string | null; ckd_stage: string; ckd_context?: string | null };
   current_rule: DashboardClinicalRule | null;
   prediction: DashboardPrediction;
+  sessionDraft?: boolean;
 };
 
 export type PatientDetail = {
