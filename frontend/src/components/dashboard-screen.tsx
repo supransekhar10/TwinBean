@@ -89,6 +89,8 @@ export function DashboardScreen({ view }: { view: DashboardView }) {
 
   const criteriaMet = rows.filter((row) => row.current_rule?.status === "criteria_met").length;
   const predictionsAvailable = rows.filter((row) => row.prediction.status === "available").length;
+  const unavailablePredictions = rows.length - predictionsAvailable;
+  const priorityPatients = rows.filter((row) => row.current_rule?.status === "criteria_met").slice(0, 4);
 
   return (
     <main className="dashboard-shell">
@@ -106,8 +108,8 @@ export function DashboardScreen({ view }: { view: DashboardView }) {
       </section>
 
       {view === "overview" && <section className="overview-page" aria-label="Cohort overview">
-        <div className="overview-metrics"><div><strong>{rows.length}</strong><span>Monitored synthetic patients</span></div><div><strong>{criteriaMet}</strong><span>Current criteria met</span></div><div><strong>{predictionsAvailable}</strong><span>Valid predictions available</span></div></div>
-        <div className="overview-actions"><div><h2>Review the cohort</h2><p>Open the prioritized patient list to review current rules and future risk separately.</p><Link className="primary-button" href="/patients">Open monitored patients</Link></div><div><h2>Add a demonstration record</h2><p>Create a clearly labelled session-only synthetic patient for interface testing.</p><Link className="secondary-button" href="/patients/new">Add synthetic patient</Link></div></div>
+        <div className="overview-metrics"><div><strong>{rows.length}</strong><span>Monitored patients</span></div><div><strong>{criteriaMet}</strong><span>Need current-rule review</span></div><div><strong>{unavailablePredictions}</strong><span>Risk results unavailable</span></div></div>
+        <div className="overview-columns"><section className="priority-panel"><div><h2>Review priority</h2><p>Patients meeting current creatinine criteria. This is observed evidence, not predicted risk.</p></div>{priorityPatients.length ? <ul>{priorityPatients.map((row) => <li key={row.patient.patient_id}><div><strong>{row.patient.display_name}</strong><span>Age {row.patient.age} · CKD {row.patient.ckd_stage}</span></div><Link href={`/patients/${row.patient.patient_id}`}>Open record</Link></li>)}</ul> : <p>No current criteria are met.</p>}<Link className="primary-button" href="/patients">View all monitored patients</Link></section><section className="overview-guide"><h2>Evidence status</h2><dl><div><dt>Current clinical rules</dt><dd>{criteriaMet} require review</dd></div><div><dt>24-hour predictions</dt><dd>{predictionsAvailable} valid, {unavailablePredictions} unavailable</dd></div><div><dt>Data source</dt><dd>Synthetic EHR + simulated IoT</dd></div></dl><Link className="secondary-button" href="/patients/new">Add synthetic patient</Link></section></div>
       </section>}
 
       {view === "add" && <section className="add-patient-panel add-patient-page" aria-labelledby="add-patient-title">
