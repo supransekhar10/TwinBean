@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 
 import { firebaseAuth } from "../lib/firebase";
 
-type ActivePage = "overview" | "patients" | "add";
+type ActivePage = "overview" | "patients";
 
 export function ClinicianSidebar({ active, email }: { active: ActivePage; email?: string | null }) {
   const router = useRouter();
@@ -23,7 +23,6 @@ export function ClinicianSidebar({ active, email }: { active: ActivePage; email?
     <nav className="sidebar-nav">
       <Link className={`sidebar-link${active === "overview" ? " sidebar-link--active" : ""}`} href="/dashboard">Overview</Link>
       <Link className={`sidebar-link${active === "patients" ? " sidebar-link--active" : ""}`} href="/patients">Monitored patients</Link>
-      <Link className={`sidebar-link${active === "add" ? " sidebar-link--active" : ""}`} href="/patients/new">Add synthetic patient</Link>
     </nav>
     <div className="sidebar-account"><span>Signed in as</span><strong title={email ?? undefined}>{email ?? "Doctor account"}</strong><button className="sidebar-signout" onClick={handleSignOut} type="button">Sign out</button></div>
   </aside>;

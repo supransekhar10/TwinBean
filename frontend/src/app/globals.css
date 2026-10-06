@@ -365,14 +365,7 @@ button:disabled { cursor: wait; opacity: 0.62; transform: none; }
 .overview-guide dl > div { padding: .8rem 0; border-bottom: 1px solid var(--line); }
 .overview-guide dt { color: var(--muted); font-size: .78rem; }
 .overview-guide dd { margin: .25rem 0 0; font-weight: 700; }
-.priority-panel > a, .overview-guide > a, .add-patient-actions a { display: inline-flex; align-items: center; justify-content: center; text-decoration: none; }
-.add-patient-panel { display: grid; grid-template-columns: minmax(240px, .7fr) minmax(0, 1.3fr); gap: 2rem; margin-bottom: 1rem; padding: 1.4rem; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); box-shadow: 0 14px 34px rgba(21,46,42,.07); }
-.add-patient-panel p { max-width: 48ch; margin: .5rem 0 0; color: var(--muted); line-height: 1.5; }
-.add-patient-panel form { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: .8rem; align-items: end; }
-.add-patient-panel label { display: grid; gap: .4rem; color: var(--muted); font-size: .78rem; font-weight: 700; }
-.add-patient-panel input, .add-patient-panel select { width: 100%; min-height: 44px; padding: .65rem .7rem; border: 1px solid var(--line); border-radius: 9px; background: #fff; font: inherit; }
-.add-patient-actions { grid-column: 1 / -1; display: flex; gap: .5rem; }
-.session-badge { display: inline-flex; align-items: center; min-height: 32px; color: var(--muted); font-size: .78rem; font-weight: 700; }
+.priority-panel > a { display: inline-flex; align-items: center; justify-content: center; text-decoration: none; }
 
 .page-footer {
   min-height: 60px;
@@ -392,8 +385,6 @@ button:disabled { cursor: wait; opacity: 0.62; transform: none; }
   .sidebar-link { width: auto; padding-inline: .65rem; }
   .sidebar-account { margin: 0; padding: 0; border: 0; }
   .sidebar-signout { width: auto; margin: 0; padding: 0 .8rem; }
-  .add-patient-panel { grid-template-columns: 1fr; gap: 1rem; }
-  .add-patient-panel form { grid-template-columns: 2fr 1fr; }
   .overview-columns { grid-template-columns: 1fr; }
 }
 
@@ -454,8 +445,6 @@ button:disabled { cursor: wait; opacity: 0.62; transform: none; }
   .dashboard-content { padding-inline: 1rem; }
   .dashboard-intro { display: grid; gap: 1rem; padding-top: 2.5rem; }
   .dashboard-sync { justify-items: start; }
-  .add-patient-panel form { grid-template-columns: 1fr; }
-  .add-patient-actions { grid-column: 1; }
   .overview-metrics { grid-template-columns: 1fr; }
   .overview-metrics > div { padding: 1rem 0; }
   .overview-metrics > div + div { border-left: 0; border-top: 1px solid var(--line); }
