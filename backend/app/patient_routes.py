@@ -8,7 +8,7 @@ from pydantic import BaseModel, ConfigDict, field_validator
 
 from .auth import require_doctor
 from .clinical_rules import ClinicalRuleResult
-from .patients import DashboardPatient, PatientDetail, PatientRepository, PatientSummary
+from .patients import DashboardPatient, PatientDetail, PatientRepository, PatientSummary, ReviewNote
 from .prediction_service import AkiPredictionResult, ClinicalResultEnvelope, PredictionService
 from .settings import get_settings
 
@@ -42,6 +42,19 @@ class ClinicalResultRequest(BaseModel):
         return value.astimezone(UTC)
 
 
+class ReviewNoteRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    text: str
+
+    @field_validator("text")
+    @classmethod
+    def validate_text(cls, value: str) -> str:
+        cleaned = value.strip()
+        if not 1 <= len(cleaned) <= 2000:
+            raise ValueError("note must contain 1 to 2000 characters")
+        return cleaned
+
+
 @router.get("/patients", response_model=list[PatientSummary], response_model_exclude_none=True)
 def list_patients(
     _claims: Annotated[dict[str, Any], Depends(require_doctor)],
@@ -72,6 +85,19 @@ def get_patient(
     if detail is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Patient not found.")
     return detail
+
+
+@router.get("/patients/{patient_id}/review-notes", response_model=list[ReviewNote])
+def list_review_notes(patient_id: Annotated[str, Path(pattern=_PATIENT_ID_PATTERN)], _claims: Annotated[dict[str, Any], Depends(require_doctor)], repository: Annotated[PatientRepository, Depends(get_patient_repository)], limit: Annotated[int, Query(ge=1, le=50)] = 20) -> list[ReviewNote]:
+    return repository.list_review_notes(patient_id, limit)
+
+
+@router.post("/patients/{patient_id}/review-notes", response_model=ReviewNote, status_code=status.HTTP_201_CREATED)
+def create_review_note(patient_id: Annotated[str, Path(pattern=_PATIENT_ID_PATTERN)], request: ReviewNoteRequest, claims: Annotated[dict[str, Any], Depends(require_doctor)], repository: Annotated[PatientRepository, Depends(get_patient_repository)]) -> ReviewNote:
+    note = repository.create_review_note(patient_id, str(claims["uid"]), request.text)
+    if note is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Patient not found.")
+    return note
 
 
 @router.post("/patients/{patient_id}/clinical-results", response_model=ClinicalResultEnvelope)

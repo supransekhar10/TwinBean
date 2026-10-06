@@ -42,6 +42,51 @@ def test_doctor_can_list_typed_root_patient_summaries(monkeypatch: pytest.Monkey
     assert "firebase_admin.firestore" not in sys.modules
 
 
+class ReviewRepository:
+    def __init__(self) -> None:
+        self.created: list[tuple[str, str, str]] = []
+
+    def list_review_notes(self, patient_id: str, limit: int) -> list[dict[str, object]]:
+        return [{"note_id": "note-" + "a" * 32, "patient_id": patient_id, "author_uid": "demo-doctor", "text": "Review hydration trend.", "created_at": "2026-10-06T10:00:00Z"}][:limit]
+
+    def create_review_note(self, patient_id: str, author_uid: str, text: str) -> dict[str, object]:
+        self.created.append((patient_id, author_uid, text))
+        return {"note_id": "note-" + "b" * 32, "patient_id": patient_id, "author_uid": author_uid, "text": text, "created_at": "2026-10-06T10:01:00Z"}
+
+
+def test_doctor_can_read_and_create_separate_review_notes(monkeypatch: pytest.MonkeyPatch) -> None:
+    repository = ReviewRepository()
+    app.dependency_overrides[get_patient_repository] = lambda: repository
+    monkeypatch.setattr(auth_module, "verify_firebase_token", lambda _token: {"uid": "demo-doctor", "role": "doctor"})
+    headers = {"Authorization": "Bearer valid-token"}
+    try:
+        listed = client.get(f"/patients/{DETAIL_PATIENT_ID}/review-notes", headers=headers)
+        created = client.post(f"/patients/{DETAIL_PATIENT_ID}/review-notes", headers=headers, json={"text": "  Recheck synthetic creatinine trend.  "})
+    finally:
+        app.dependency_overrides.clear()
+    assert listed.status_code == 200
+    assert listed.json()[0]["text"] == "Review hydration trend."
+    assert created.status_code == 201
+    assert created.json()["text"] == "Recheck synthetic creatinine trend."
+    assert repository.created == [(DETAIL_PATIENT_ID, "demo-doctor", "Recheck synthetic creatinine trend.")]
+
+
+def test_review_note_rejects_non_doctor_and_blank_text(monkeypatch: pytest.MonkeyPatch) -> None:
+    repository = ReviewRepository()
+    app.dependency_overrides[get_patient_repository] = lambda: repository
+    headers = {"Authorization": "Bearer valid-token"}
+    try:
+        monkeypatch.setattr(auth_module, "verify_firebase_token", lambda _token: {"uid": "assistant", "role": "assistant"})
+        forbidden = client.post(f"/patients/{DETAIL_PATIENT_ID}/review-notes", headers=headers, json={"text": "note"})
+        monkeypatch.setattr(auth_module, "verify_firebase_token", lambda _token: {"uid": "demo-doctor", "role": "doctor"})
+        invalid = client.post(f"/patients/{DETAIL_PATIENT_ID}/review-notes", headers=headers, json={"text": "   "})
+    finally:
+        app.dependency_overrides.clear()
+    assert forbidden.status_code == 403
+    assert invalid.status_code == 422
+    assert repository.created == []
+
+
 class FakeSnapshot:
     def __init__(self, data: dict[str, object] | None, identifier: str | None = None) -> None:
         self._data = data

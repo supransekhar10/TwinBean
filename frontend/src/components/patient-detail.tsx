@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
-import { ApiError, fetchPatientTwin, type AkiPrediction, type ClinicalRuleResult, type PatientDetail } from "../lib/api";
+import { ApiError, createReviewNote, fetchPatientTwin, fetchReviewNotes, type AkiPrediction, type ClinicalRuleResult, type PatientDetail, type ReviewNote } from "../lib/api";
 import { firebaseAuth } from "../lib/firebase";
 import { ClinicianSidebar } from "./clinician-sidebar";
 
@@ -45,9 +45,11 @@ export function PatientDetailView({ data }: { data: TwinData }) {
 export function PatientDetailScreen({ patientId }: { patientId: string }) {
   const [state, setState] = useState<"loading" | "ready" | "error" | "unauthorized">("loading");
   const [data, setData] = useState<TwinData | null>(null);
+  const [notes, setNotes] = useState<ReviewNote[]>([]);
+  const [noteState, setNoteState] = useState<"idle" | "saving" | "error">("idle");
   useEffect(() => onAuthStateChanged(firebaseAuth, async (user) => {
     if (!user) { setState("unauthorized"); return; }
-    try { setData(await fetchPatientTwin(patientId, await user.getIdToken())); setState("ready"); }
+    try { const token = await user.getIdToken(); setData(await fetchPatientTwin(patientId, token)); setNotes(await fetchReviewNotes(patientId, token)); setState("ready"); }
     catch (error) { setState(error instanceof ApiError && (error.status === 401 || error.status === 403) ? "unauthorized" : "error"); }
   }), [patientId]);
   const content = state === "loading"
@@ -56,6 +58,6 @@ export function PatientDetailScreen({ patientId }: { patientId: string }) {
       ? <div className="detail-shell detail-state"><h1>Doctor access is required</h1><p>Sign in with an approved doctor account.</p><Link className="primary-button" href="/">Return to sign in</Link></div>
       : state === "error" || !data
         ? <div className="detail-shell detail-state"><h1>Patient detail could not be loaded</h1><p>Check the backend connection and return to the patient list to retry.</p><Link className="secondary-button" href="/patients">Back to monitored patients</Link></div>
-        : <PatientDetailView data={data} />;
+        : <><PatientDetailView data={data} /><section className="evidence-section review-notes" id="review-notes"><h2>Doctor review notes</h2><p>Document observations about this synthetic case. Notes remain separate from clinical rules, predictions, and SHAP explanations.</p><form onSubmit={async (event) => { event.preventDefault(); const form = event.currentTarget; const input = new FormData(form).get("note"); if (typeof input !== "string" || !input.trim() || !firebaseAuth.currentUser) return; setNoteState("saving"); try { const saved = await createReviewNote(patientId, input.trim(), await firebaseAuth.currentUser.getIdToken()); setNotes((current) => [saved, ...current]); form.reset(); setNoteState("idle"); } catch { setNoteState("error"); } }}><label><span>Review note</span><textarea name="note" required maxLength={2000} rows={4} placeholder="Record a clinical observation about this synthetic patient…" /></label><div><button className="primary-button" disabled={noteState === "saving"} type="submit">{noteState === "saving" ? "Saving…" : "Save review note"}</button>{noteState === "error" && <span role="alert">Note could not be saved. Check Firestore and retry.</span>}</div></form>{notes.length ? <ol>{notes.map((note) => <li key={note.note_id}><p>{note.text}</p><small>{formatTime(note.created_at)} · Doctor review</small></li>)}</ol> : <p>No doctor review notes yet.</p>}</section></>;
   return <main className="dashboard-shell"><ClinicianSidebar active="patients" email={firebaseAuth.currentUser?.email} /><div className="dashboard-content">{content}</div></main>;
 }

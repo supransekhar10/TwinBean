@@ -6,6 +6,7 @@ import hashlib
 import json
 import os
 import re
+import uuid
 from collections import Counter
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -104,6 +105,15 @@ class DashboardPatient(BaseModel):
     patient: PatientSummary
     current_rule: DashboardClinicalRuleSummary | None
     prediction: DashboardPredictionSummary
+
+
+class ReviewNote(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    note_id: str
+    patient_id: str
+    author_uid: str
+    text: str
+    created_at: datetime
 
 
 @dataclass(frozen=True)
@@ -308,6 +318,25 @@ class PatientRepository:
         if detail is not None and self._disk_cache_enabled:
             self._write_cache_json(cache_path, detail.model_dump(mode="json"))
         return detail
+
+    def list_review_notes(self, patient_id: str, limit: int = 20) -> list[ReviewNote]:
+        active = self._load_active_cohort()
+        if active is None or self._get_patient_for_active(active, patient_id, 1) is None:
+            return []
+        snapshots = self._client.document(_patient_path(active.cohort_id, patient_id)).collection("review_notes").order_by("created_at").limit(min(max(limit, 1), 50)).stream(retry=_FIRESTORE_READ_RETRY, timeout=FIRESTORE_READ_TIMEOUT_SECONDS)
+        notes = [ReviewNote.model_validate(snapshot.to_dict() or {}) for snapshot in snapshots]
+        return list(reversed(notes))
+
+    def create_review_note(self, patient_id: str, author_uid: str, text: str) -> ReviewNote | None:
+        active = self._load_active_cohort()
+        if active is None or self._get_patient_for_active(active, patient_id, 1) is None:
+            return None
+        note = ReviewNote(note_id=f"note-{uuid.uuid4().hex}", patient_id=patient_id, author_uid=author_uid, text=text, created_at=datetime.now(UTC))
+        batch = self._client.batch()
+        document = self._client.document(_patient_path(active.cohort_id, patient_id)).collection("review_notes").document(note.note_id)
+        batch.set(document, note.model_dump(mode="python"))
+        batch.commit()
+        return note
 
     def get_clinical_context(self, patient_id: str) -> ClinicalContext | None:
         """Resolve one patient from the validated active immutable cohort only."""

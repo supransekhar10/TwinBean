@@ -34,6 +34,8 @@ export type ClinicalRuleResult = DashboardClinicalRule & {
   limitation: string;
 };
 
+export type ReviewNote = { note_id: string; patient_id: string; author_uid: string; text: string; created_at: string };
+
 export type AkiPrediction =
   | (Extract<DashboardPrediction, { status: "unavailable" }>)
   | (Extract<DashboardPrediction, { status: "available" }> & {
@@ -101,4 +103,14 @@ export async function fetchPatientTwin(patientId: string, idToken: string) {
     fetchProtected<AkiPrediction[]>(`/patients/${encodedId}/aki-predictions?limit=1`, idToken),
   ]);
   return { detail, rule: rules[0] ?? null, prediction: predictions[0] ?? null };
+}
+
+export async function fetchReviewNotes(patientId: string, idToken: string): Promise<ReviewNote[]> {
+  return fetchProtected<ReviewNote[]>(`/patients/${encodeURIComponent(patientId)}/review-notes?limit=20`, idToken);
+}
+
+export async function createReviewNote(patientId: string, text: string, idToken: string): Promise<ReviewNote> {
+  const response = await fetch(`${apiBaseUrl}/patients/${encodeURIComponent(patientId)}/review-notes`, { method: "POST", headers: { Authorization: `Bearer ${idToken}`, "Content-Type": "application/json" }, body: JSON.stringify({ text }) });
+  if (!response.ok) throw new ApiError(response.status, "Review note could not be saved.");
+  return response.json() as Promise<ReviewNote>;
 }

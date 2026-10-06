@@ -352,6 +352,7 @@ button:disabled { cursor: wait; opacity: 0.62; transform: none; }
 .overview-metrics > div { display: grid; gap: .25rem; padding: 1.5rem; }
 .overview-metrics > div + div { border-left: 1px solid var(--line); }
 .overview-metrics strong { font-size: clamp(2rem, 4vw, 3.5rem); font-variant-numeric: tabular-nums; }
+.count-up { min-width: 2ch; }
 .overview-metrics span { color: var(--muted); }
 .overview-columns { display: grid; grid-template-columns: minmax(0,1.35fr) minmax(280px,.65fr); gap: 1rem; }
 .priority-panel, .overview-guide { padding: 1.5rem; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
@@ -366,6 +367,13 @@ button:disabled { cursor: wait; opacity: 0.62; transform: none; }
 .overview-guide dt { color: var(--muted); font-size: .78rem; }
 .overview-guide dd { margin: .25rem 0 0; font-weight: 700; }
 .priority-panel > a { display: inline-flex; align-items: center; justify-content: center; text-decoration: none; }
+.review-workspace { padding: 1.5rem; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+.review-workspace > div p { color: var(--muted); }
+.review-workspace ul { margin: 1.25rem 0 0; padding: 0; list-style: none; border-top: 1px solid var(--line); }
+.review-workspace li { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1rem 0; border-bottom: 1px solid var(--line); }
+.review-workspace li div { display: grid; gap: .25rem; }
+.review-workspace li span { color: var(--muted); font-size: .84rem; }
+.review-workspace a { text-decoration: none; }
 
 .page-footer {
   min-height: 60px;
@@ -508,6 +516,15 @@ button:disabled { cursor: wait; opacity: 0.62; transform: none; }
 .shap-unavailable dt { color: var(--muted); font-size: .75rem; }
 .shap-unavailable dd { margin: .3rem 0 0; font-weight: 700; overflow-wrap: anywhere; }
 .shap-unavailable small { color: var(--muted); }
+.review-notes form { display: grid; gap: .8rem; margin: 1rem 0 1.5rem; }
+.review-notes label { display: grid; gap: .45rem; color: var(--muted); font-size: .82rem; font-weight: 700; }
+.review-notes textarea { width: 100%; resize: vertical; padding: .8rem; border: 1px solid var(--line); border-radius: 9px; color: var(--ink); background: #fff; font: inherit; line-height: 1.5; }
+.review-notes form > div { display: flex; align-items: center; gap: 1rem; }
+.review-notes form [role="alert"] { color: var(--danger); font-size: .82rem; }
+.review-notes ol { margin: 0; padding: 0; list-style: none; border-top: 1px solid var(--line); }
+.review-notes li { padding: 1rem 0; border-bottom: 1px solid var(--line); }
+.review-notes li p { margin: 0 0 .35rem; white-space: pre-wrap; }
+.review-notes li small { color: var(--muted); }
 
 @media (max-width: 700px) {
   .detail-header, .clinical-grid { display: grid; grid-template-columns: 1fr; align-items: start; }
@@ -518,4 +535,5 @@ button:disabled { cursor: wait; opacity: 0.62; transform: none; }
   .evidence-section { padding: 1rem; }
   .shap-list li { grid-template-columns: 1fr; }
   .shap-unavailable dl { grid-template-columns: 1fr 1fr; }
+  .review-workspace li { align-items: stretch; flex-direction: column; }
 }
