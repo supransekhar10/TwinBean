@@ -17,7 +17,7 @@ describe("DoctorDashboard", () => {
     expect(html).toContain("Prediction generated");
     expect(html).toContain("Review now");
     expect(html).toContain("Search patients");
-    expect(html).toContain("Alerts off");
+    expect(html).not.toContain("Alerts off");
     expect(html).not.toContain("Data quality");
     expect(html).not.toContain("Simulated IoT data is stale.");
     expect(html).toContain("Open patient High Risk");
