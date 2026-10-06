@@ -4,9 +4,10 @@ current_phase: 07
 current_plan: 01
 status: verifying
 stopped_at: Phase 07 implementation complete; live Firestore refresh pending
-last_updated: "2026-10-05T01:04:08.106Z"
+last_updated: "2026-10-06T11:05:12.036Z"
 last_activity: 2026-10-05
-last_activity_desc: Phase 07 implementation and local verification
+last_activity_desc: Completed quick task 261005-wrm dashboard triage refinements
+state_head: 7f2c018559302d7100a272f1ec74fcccb0bd7938
 progress:
   total_phases: 7
   completed_phases: 6
@@ -30,7 +31,7 @@ Phase: 07
 Current Plan: 01
 Total Plans in Phase: 1
 Status: Verification pending
-Last activity: 2026-10-05 — Phase 07 implementation and local verification
+Last activity: 2026-10-05 — Completed quick task 261005-wrm dashboard triage refinements
 
 Progress: [█████████░] 94%
 
@@ -99,6 +100,13 @@ Live Firestore refresh remains to be verified when the project read quota is ava
 ### Blockers/Concerns
 
 None.
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 261005-wrm | Remove data-quality UI, shorten refresh, add honest risky synthetic cases, search/filter controls, and opt-in alert sound | 2026-10-06 | 85b4625 | [261005-wrm-remove-data-quality-ui-shorten-refresh-a](./quick/261005-wrm-remove-data-quality-ui-shorten-refresh-a/) |
+| 261006-mxn | Build full-width doctor workspace with logo sidebar, navigation, and safe session-only synthetic patient creation | 2026-10-06 | 7f2c018 | [261006-mxn-build-full-width-doctor-workspace-with-l](./quick/261006-mxn-build-full-width-doctor-workspace-with-l/) |
 
 ## Deferred Items
 
