@@ -22,7 +22,7 @@
   &nbsp;&middot;&nbsp;
   <a href="https://drive.google.com/file/d/1iOhBH7e1AUC2HTvxhKT5BzyGBHJlsToT/view?usp=sharing"><strong>Architecture PDF</strong></a>
   &nbsp;&middot;&nbsp;
-  <a href="#demo-video"><strong>Demo Video</strong></a>
+  <a href="https://youtu.be/INTJ57_fiSM"><strong>Demo Video</strong></a>
 </p>
 
 ## Submission information
@@ -36,7 +36,7 @@
 | College / incubator | **SRM Institute of Science and Technology** |
 | Healthcare use case | Predict and explain the risk of a new acute kidney injury (AKI) event within 24 hours for synthetic adults with chronic kidney disease (CKD). |
 | Deployed application | [https://twinbean.vercel.app/](https://twinbean.vercel.app/) - **desktop viewing is recommended** |
-| Demo video | **YouTube link pending.** Add the public or unlisted link here before final submission. |
+| Demo video | [Watch the 15–20 minute TwinBean walkthrough on YouTube](https://youtu.be/INTJ57_fiSM) |
 | Architecture | [Public Google Drive PDF](https://drive.google.com/file/d/1iOhBH7e1AUC2HTvxhKT5BzyGBHJlsToT/view?usp=sharing), [repository PDF](TwinBean%20System%20Architecture.pdf), and the Mermaid diagram below |
 | Presentation | [Public Google Slides presentation](https://docs.google.com/presentation/d/1jyrQI8YLM2UM95pPrBqGBxsJuASEmPam/edit?usp=sharing) and [repository PPTX](TwinBean%20Presentation.pptx) |
 | License | [MIT License](LICENSE) |
@@ -69,7 +69,7 @@ These accounts contain synthetic demonstration data only. They are public demo c
 
 ## Demo video
 
-**YouTube link:** Coming soon. The final video should be public or unlisted and added here before the submission form is completed.
+Watch the complete TwinBean prototype walkthrough on YouTube: **[TwinBean Demo Video](https://youtu.be/INTJ57_fiSM)**.
 
 ## Problem statement
 
@@ -319,7 +319,7 @@ Record a 15–20 minute walkthrough and upload it as public or unlisted. A sugge
 - [x] Project title, problem statement, and healthcare use case are documented.
 - [x] Technical stack and AI/ML framework details are documented.
 - [x] Deployed application and public demo credentials are documented.
-- [ ] Add the final public or unlisted YouTube demo link.
+- [x] The public or unlisted YouTube demo link is included.
 - [x] MIT license details are included.
 - [x] Architecture diagram is included in this README, in the repository, and as a public Google Drive PDF.
 - [x] The project presentation is included in the repository and linked through Google Slides.
