@@ -323,8 +323,8 @@ Record a 15–20 minute walkthrough and upload it as public or unlisted. A sugge
 - [x] MIT license details are included.
 - [x] Architecture diagram is included in this README, in the repository, and as a public Google Drive PDF.
 - [x] The project presentation is included in the repository and linked through Google Slides.
-- [x] The supplied presentation, architecture, and deployment URLs return HTTP 200.
-- [ ] Confirm the final GitHub repository is public and opens without requesting permission.
+- [x] The supplied presentation, architecture, deployment, and demo-video URLs return HTTP 200.
+- [x] The final GitHub repository is public and opens without requesting permission.
 - [ ] Rename the repository folder to `Team Name_College Name` before final submission if the organizer requires the local folder name to match.
 
 ## Limitations and next steps
