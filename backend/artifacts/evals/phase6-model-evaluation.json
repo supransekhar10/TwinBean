@@ -1,15 +1,15 @@
 {
   "clinical_validation": false,
   "dataset": {
-    "cohort_sha256": "805e42fe1394afc8b31a59ec2778b358b671bb516e8e43e197994a9032002f03",
+    "cohort_sha256": "8cec10e12f553864f53c3a7361934e1674af7fa94285a1fcc620bc1d9fec271b",
     "generator": "TwinBean deterministic synthetic generator (not Synthea)",
-    "negative_labels": 40,
-    "patient_count": 80,
-    "positive_labels": 40,
-    "prediction_cutoff": "2026-10-04T00:00:00Z",
-    "seed": 20261005
+    "negative_labels": 51,
+    "patient_count": 100,
+    "positive_labels": 49,
+    "prediction_cutoff": "2025-12-31T00:00:00Z",
+    "seed": 20261008
   },
-  "generated_at": "2026-10-05T01:01:51.551103Z",
+  "generated_at": "2026-10-08T15:49:19.156117Z",
   "leakage_checks": {
     "features_filtered_at_or_before_cutoff": true,
     "labels_use_open_next_24h_window": true,
@@ -29,11 +29,11 @@
         "latest_systolic_bp_mmhg"
       ],
       "metrics": {
-        "accuracy_at_0_5": 0.5,
-        "average_precision": 0.628915,
-        "brier_score": 0.296743,
-        "log_loss": 0.806445,
-        "roc_auc": 0.51
+        "accuracy_at_0_5": 0.769231,
+        "average_precision": 0.858848,
+        "brier_score": 0.18798,
+        "log_loss": 0.600357,
+        "roc_auc": 0.810651
       }
     },
     "ehr_only": {
@@ -43,21 +43,21 @@
         "creatinine_delta_48h_mg_dl"
       ],
       "metrics": {
-        "accuracy_at_0_5": 0.55,
-        "average_precision": 0.596142,
-        "brier_score": 0.265317,
-        "log_loss": 0.743502,
-        "roc_auc": 0.605
+        "accuracy_at_0_5": 0.692308,
+        "average_precision": 0.841499,
+        "brier_score": 0.204337,
+        "log_loss": 0.655675,
+        "roc_auc": 0.781065
       }
     }
   },
   "report_version": "twinbean-synthetic-evaluation-v1",
   "split": {
-    "held_out_patients": 20,
+    "held_out_patients": 26,
     "patient_overlap": 0,
     "same_held_out_patients_for_both_models": true,
     "strategy": "deterministic stratified patient-level holdout",
-    "train_patients": 60
+    "train_patients": 74
   },
   "synthetic_data_only": true
 }

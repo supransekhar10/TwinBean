@@ -20,7 +20,8 @@ Firebase Web configuration is public application configuration. The Admin SDK se
    ```dotenv
    FIREBASE_PROJECT_ID=your-project-id
    GOOGLE_APPLICATION_CREDENTIALS=C:\\secure\\path\\service-account.json
-   CORS_ORIGINS=http://localhost:3000
+   CORS_ORIGINS=http://localhost:3000,http://localhost:3001
+   CORS_ORIGIN_REGEX=^http://(?:localhost|127\.0\.0\.1|192\.168(?:\.\d{1,3}){2}):300[01]$
    ```
 
 The repository ignores local environment files and common Firebase service-account filenames. Never prefix Admin SDK values with `NEXT_PUBLIC_`, put service-account material in browser configuration, or record a credential path in operational evidence.
@@ -52,7 +53,7 @@ Each generated patient produces one root, 26 EHR events, and 24 IoT observations
 1. Start FastAPI from `backend`:
 
    ```powershell
-   .\.venv\Scripts\python.exe -m uvicorn app.main:app --reload
+   .\.venv\Scripts\python.exe -m uvicorn app.main:app --reload --host 0.0.0.0
    ```
 
 2. In a trusted backend terminal, assign the demo account its custom claim. Only an operator with backend service-account access can do this:
@@ -68,9 +69,9 @@ Each generated patient produces one root, 26 EHR events, and 24 IoT observations
 
 No bearer token, password, service-account JSON, private key, or credential path may be pasted into commands, logs, screenshots, or the live-evidence file. Record only sanitized timestamps, checksums, counts, representative owned paths, HTTP statuses, response-shape notes, and operator approval.
 
-## Current live-verification status
+## Verification expectations
 
-The versioned-cohort publication contract passed its post-fix approved-runtime rerun. The sanitized results are recorded in `.planning/phases/02-synthetic-kidney-data-and-firestore/02-04-POST-FIX-LIVE-EVIDENCE.md`. The run used the existing Firebase Admin SDK, repeated the deterministic seed, independently read back both streams, preserved the unrelated canary, and verified protected doctor reads.
+Before a public demonstration, repeat the deterministic seed in the intended Firebase project, read back both streams, confirm that an unrelated canary document remains unchanged, and verify the protected doctor routes. Record only sanitized counts, timestamps, checksums, representative owned paths, and HTTP status codes. Do not publish credentials, tokens, private project identifiers, or patient-like personal information.
 
 ## Expected authorization behavior
 

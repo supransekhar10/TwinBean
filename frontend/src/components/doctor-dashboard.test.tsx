@@ -18,7 +18,7 @@ describe("DoctorDashboard", () => {
     const html = renderToStaticMarkup(<DoctorDashboard rows={rows} />);
     expect(html).toContain("Current clinical rule");
     expect(html).toContain("24-hour AKI risk");
-    expect(html).toContain("82%");
+    expect(html).toContain("82.0%");
     expect(html).toContain("Prediction generated");
     expect(html).toContain("Review now");
     expect(html).toContain("Search patients");

@@ -13,7 +13,10 @@ from .aki_features import FEATURE_SCHEMA
 from .aki_model import ArtifactIntegrityError, VerifiedBundle
 
 
-RAW_MARGIN_TOLERANCE = 1e-6
+# XGBoost emits float32 margins while SHAP aggregates feature contributions in
+# float64. A three-micro margin tolerance covers the observed four-feature
+# accumulation error without masking a materially inconsistent explanation.
+RAW_MARGIN_TOLERANCE = 3e-6
 NON_CAUSAL_SEMANTICS = "model influence in raw-margin/log-odds space; not causal"
 
 

@@ -5,7 +5,7 @@ import { useMemo, useState } from "react";
 
 import type { DashboardPatient } from "@/lib/api";
 
-type DashboardProps = { rows: DashboardPatient[]; loading?: boolean; error?: "general" | "unauthorized" | "unavailable"; onRetry?: () => void };
+type DashboardProps = { rows: DashboardPatient[]; error?: "general" | "unauthorized" | "unavailable"; onRetry?: () => void };
 type PatientFilter = "all" | "criteria_met" | "risk_available" | "risk_unavailable";
 const ruleLabels = { criteria_met: "Criteria met", criteria_not_met: "Criteria not met", insufficient_creatinine_history: "Insufficient creatinine history" };
 
@@ -15,7 +15,7 @@ function generatedAt(row: DashboardPatient): string {
 }
 
 function riskText(row: DashboardPatient): string {
-  return row.prediction.status === "available" ? `${Math.round(row.prediction.probability * 100)}%` : "Risk unavailable";
+  return row.prediction.status === "available" ? `${(row.prediction.probability * 100).toFixed(1)}%` : "Risk unavailable";
 }
 
 function priorityText(row: DashboardPatient): string {
@@ -36,7 +36,7 @@ function PatientFacts({ row }: { row: DashboardPatient }) {
   </>;
 }
 
-export function DoctorDashboard({ rows, loading = false, error, onRetry }: DashboardProps) {
+export function DoctorDashboard({ rows, error, onRetry }: DashboardProps) {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<PatientFilter>("all");
   const criteriaMet = rows.filter((row) => row.current_rule?.status === "criteria_met").length;
@@ -58,7 +58,6 @@ export function DoctorDashboard({ rows, loading = false, error, onRetry }: Dashb
     });
   }, [filter, query, rows]);
 
-  if (loading) return <section className="dashboard-state" aria-live="polite"><h2>Loading monitored patients...</h2><div className="dashboard-skeleton" aria-hidden="true" /></section>;
   if (error) {
     const content = error === "unauthorized"
       ? ["Doctor access is required", "Sign out and sign in with an approved doctor account."]

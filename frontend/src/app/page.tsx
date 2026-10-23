@@ -12,7 +12,6 @@ export default function Home() {
         <span className="prototype-label">Research prototype / synthetic data only</span>
       </header>
 
-      <a className="skip-link" href="#main-content">Skip to sign in</a>
       <div className="content-grid" id="main-content">
         <section className="intro-copy" aria-labelledby="page-title">
           <p className="context-label">Kidney digital twin research</p>

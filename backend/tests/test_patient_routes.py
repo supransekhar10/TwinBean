@@ -7,7 +7,7 @@ from fastapi.testclient import TestClient
 from app import auth as auth_module
 from app.main import app
 from app.patient_routes import get_patient_repository
-from app.patients import PatientRepository
+from app.patients import PatientDetail, PatientRepository
 from app.synthetic_data import generate_cohort
 
 
@@ -257,6 +257,35 @@ def test_doctor_can_read_separate_typed_patient_detail(monkeypatch: pytest.Monke
     assert payload["ehr_history"][0]["source"] == "twinbean-synthetic-ehr"
     assert payload["iot_observations"][0]["source"] == "twinbean-simulated-iot"
     assert detail_repository.patient_ids == [DETAIL_PATIENT_ID]
+
+
+class ReportRepository(DetailRouteRepository):
+    def get_patient(self, patient_id: str, event_limit: int = 100) -> PatientDetail:
+        return PatientDetail.model_validate(super().get_patient(patient_id, event_limit))
+
+    def list_clinical_rules(self, _patient_id: str, _limit: int) -> list[object]:
+        return []
+
+    def list_aki_predictions(self, _patient_id: str, _limit: int) -> list[object]:
+        return []
+
+    def list_review_notes(self, _patient_id: str, _limit: int) -> list[object]:
+        return []
+
+
+def test_doctor_can_download_branded_patient_pdf(monkeypatch: pytest.MonkeyPatch) -> None:
+    repository = ReportRepository()
+    app.dependency_overrides[get_patient_repository] = lambda: repository
+    monkeypatch.setattr(auth_module, "verify_firebase_token", lambda _token: {"uid": "demo-doctor", "role": "doctor"})
+    try:
+        response = client.get(f"/patients/{DETAIL_PATIENT_ID}/report.pdf", headers={"Authorization": "Bearer valid-token"})
+    finally:
+        app.dependency_overrides.clear()
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "application/pdf"
+    assert "attachment;" in response.headers["content-disposition"]
+    assert response.content.startswith(b"%PDF")
+    assert len(response.content) > 2000
 
 
 def test_missing_detail_token_never_calls_repository(detail_repository: DetailRouteRepository) -> None:

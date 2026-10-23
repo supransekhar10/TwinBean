@@ -141,7 +141,7 @@ def train_release(
             "feature_schema": release_schema(),
             "freshness_policy": {"version": "required-observation-24h-2026.10.04", "maximum_age_hours": 24},
             "label_version": "new-aki-24h-2026.10.04",
-            "explanation": {"model_output": "raw", "additivity_abs_tol": 1e-6, "semantics": "model_influence_not_causal"},
+            "explanation": {"model_output": "raw", "additivity_abs_tol": 3e-6, "semantics": "model_influence_not_causal"},
             "cohort": {
                 "generator_version": generator_version,
                 "seed": seed,

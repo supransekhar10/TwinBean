@@ -9,7 +9,13 @@ from app import auth as auth_module
 from app.clinical_rules import ClinicalRuleResult
 from app.main import app
 from app.patient_routes import get_patient_repository
-from app.patients import PatientRepository, PatientSummary
+from app.patients import (
+    AvailableDashboardPrediction,
+    DashboardClinicalRuleSummary,
+    DashboardPatient,
+    PatientRepository,
+    PatientSummary,
+)
 from app.prediction_service import AvailableAkiPrediction, UnavailableAkiPrediction
 
 
@@ -30,7 +36,8 @@ class ProjectionRepository(PatientRepository):
             PatientSummary(patient_id="tbp-cccccccccccccccccccccccccccccccc", display_name="Beta", age=58, ckd_stage="G3a"),
         ]
 
-    def _load_active_cohort(self) -> object:
+    def _load_active_cohort(self, *, force_validation: bool = False) -> object:
+        del force_validation
         return object()
 
     def _list_patients_for_active(self, _active: object, limit: int) -> list[PatientSummary]:
@@ -124,6 +131,42 @@ def test_dashboard_disk_snapshot_serves_new_repository_without_firestore(
     reader._load_active_cohort = lambda: (_ for _ in ()).throw(AssertionError("Firestore must not be read"))  # type: ignore[method-assign]
 
     assert reader.list_dashboard_patients(100) == expected
+
+
+def test_refresh_does_not_replace_complete_snapshot_with_missing_evidence(
+    tmp_path: Path,
+) -> None:
+    cache_path = tmp_path / "dashboard-100.json"
+    patient = PatientSummary(
+        patient_id="tbp-dddddddddddddddddddddddddddddddd",
+        display_name="Complete Patient",
+        age=68,
+        ckd_stage="G4",
+    )
+    complete = DashboardPatient(
+        patient=patient,
+        current_rule=DashboardClinicalRuleSummary(
+            status="criteria_met",
+            calculation_time=CUTOFF,
+            prediction_cutoff=CUTOFF,
+        ),
+        prediction=AvailableDashboardPrediction(
+            status="available",
+            probability=0.77,
+            prediction_cutoff=CUTOFF,
+            generated_at=CUTOFF,
+        ),
+    )
+    repository = ProjectionRepository()
+    repository._disk_cache_enabled = True
+    repository._dashboard_cache_path = lambda _limit: cache_path  # type: ignore[method-assign]
+    repository._store_dashboard_disk_cache(100, [complete])
+
+    refreshed = repository.list_dashboard_patients(100, refresh=True)
+
+    assert refreshed == [complete]
+    persisted = repository._load_dashboard_disk_cache(100)
+    assert persisted == [complete]
 
 
 class RouteRepository:

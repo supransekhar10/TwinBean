@@ -3,14 +3,16 @@ from functools import lru_cache
 from typing import Annotated, Any
 
 import anyio
-from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, Response, status
 from pydantic import BaseModel, ConfigDict, field_validator
 
 from .auth import require_doctor
 from .clinical_rules import ClinicalRuleResult
 from .patients import DashboardPatient, PatientDetail, PatientRepository, PatientSummary, ReviewNote
+from .patient_report import build_patient_report
 from .prediction_service import AkiPredictionResult, ClinicalResultEnvelope, PredictionService
 from .settings import get_settings
+from .twini import TwiniRequest, TwiniResponse, TwiniService
 
 
 router = APIRouter()
@@ -27,6 +29,10 @@ def get_patient_repository() -> PatientRepository:
 def get_prediction_service() -> PredictionService:
     """Construct the server-only clinical orchestration service after authorization."""
     return PredictionService(get_patient_repository())
+
+
+def get_twini_service() -> TwiniService:
+    return TwiniService(get_settings(), get_patient_repository())
 
 
 class ClinicalResultRequest(BaseModel):
@@ -53,6 +59,25 @@ class ReviewNoteRequest(BaseModel):
         if not 1 <= len(cleaned) <= 2000:
             raise ValueError("note must contain 1 to 2000 characters")
         return cleaned
+
+
+@router.post("/assistant/chat", response_model=TwiniResponse)
+async def chat_with_twini(
+    request: TwiniRequest,
+    _claims: Annotated[dict[str, Any], Depends(require_doctor)],
+    service: Annotated[TwiniService, Depends(get_twini_service)],
+) -> TwiniResponse:
+    try:
+        return await anyio.to_thread.run_sync(service.answer, request)
+    except LookupError as error:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Patient not found.") from error
+    except Exception as error:
+        if isinstance(error, HTTPException):
+            raise
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Twini is temporarily unavailable. Check the backend Groq configuration and retry.",
+        ) from error
 
 
 @router.get("/patients", response_model=list[PatientSummary], response_model_exclude_none=True)
@@ -136,3 +161,20 @@ def list_aki_predictions(
     limit: Annotated[int, Query(ge=1, le=100)] = 100,
 ) -> list[AkiPredictionResult]:
     return repository.list_aki_predictions(patient_id, limit)
+
+
+@router.get("/patients/{patient_id}/report.pdf")
+def download_patient_report(
+    patient_id: Annotated[str, Path(pattern=_PATIENT_ID_PATTERN)],
+    _claims: Annotated[dict[str, Any], Depends(require_doctor)],
+    repository: Annotated[PatientRepository, Depends(get_patient_repository)],
+) -> Response:
+    detail = repository.get_patient(patient_id)
+    if detail is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Patient not found.")
+    rules = repository.list_clinical_rules(patient_id, 1)
+    predictions = repository.list_aki_predictions(patient_id, 1)
+    notes = repository.list_review_notes(patient_id, 20)
+    pdf = build_patient_report(detail, rules[0] if rules else None, predictions[0] if predictions else None, notes)
+    safe_name = "-".join(part for part in detail.patient.display_name.lower().split() if part.isalnum()) or "patient"
+    return Response(pdf, media_type="application/pdf", headers={"Content-Disposition": f'attachment; filename="twinbean-{safe_name}-report.pdf"', "Cache-Control": "no-store"})

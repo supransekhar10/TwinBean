@@ -9,7 +9,7 @@ from typing import Annotated, Literal, Protocol
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter
 
 from .clinical_rules import ClinicalRuleResult, calculate_creatinine_rule
-from .patients import ClinicalContext, PatientRepository
+from .patients import ClinicalContext, PatientDetail, PatientRepository
 from .settings import Settings, get_settings
 
 
@@ -76,6 +76,25 @@ class PredictionEngine(Protocol):
     def predict(self, context: ClinicalContext, prediction_cutoff: datetime) -> AkiPredictionResult: ...
 
 
+def _load_prediction_dependencies():
+    """Load the native ML stack only when inference is explicitly requested."""
+
+    from .aki_explanations import ExplanationIntegrityError, explain_prediction
+    from .aki_features import FEATURE_SCHEMA, FRESHNESS_POLICY, build_prediction_snapshot
+    from .aki_model import ArtifactIntegrityError, load_verified_bundle, predict_probability
+
+    return (
+        ExplanationIntegrityError,
+        explain_prediction,
+        FEATURE_SCHEMA,
+        FRESHNESS_POLICY,
+        build_prediction_snapshot,
+        ArtifactIntegrityError,
+        load_verified_bundle,
+        predict_probability,
+    )
+
+
 class VerifiedPredictionEngine:
     """Fail-closed, server-configured XGBoost and SHAP inference for one context."""
 
@@ -88,17 +107,25 @@ class VerifiedPredictionEngine:
             # Heavy native ML libraries are loaded only for an explicit inference
             # request. Stored-patient reads and authentication must remain usable
             # on hosts where application-control policy blocks those DLLs.
-            from .aki_explanations import ExplanationIntegrityError, explain_prediction
-            from .aki_features import FEATURE_SCHEMA, FRESHNESS_POLICY, build_prediction_snapshot
-            from .aki_model import ArtifactIntegrityError, load_verified_bundle, predict_probability
+            (
+                ExplanationIntegrityError,
+                explain_prediction,
+                FEATURE_SCHEMA,
+                FRESHNESS_POLICY,
+                build_prediction_snapshot,
+                ArtifactIntegrityError,
+                load_verified_bundle,
+                predict_probability,
+            ) = _load_prediction_dependencies()
+        except (ImportError, OSError):
+            return self._unavailable(prediction_cutoff, "model_engine_unavailable")
 
+        try:
             snapshot = build_prediction_snapshot(context, prediction_cutoff)
             if snapshot.status != "available" or snapshot.frame is None:
                 return self._unavailable(prediction_cutoff, snapshot.reason or "invalid_prediction_input")
             bundle = load_verified_bundle(self._artifact_dir)
             probability = predict_probability(bundle, snapshot.frame)
-        except (ImportError, OSError):
-            return self._unavailable(prediction_cutoff, "model_engine_unavailable")
         except ArtifactIntegrityError:
             return self._unavailable(prediction_cutoff, "model_artifact_or_inference_unavailable")
 
@@ -168,7 +195,18 @@ class PredictionService:
         if context is None:
             return None
         clinical_rule = calculate_creatinine_rule(context.patient.ehr_history, cutoff)
-        prediction = validate_aki_prediction_result(self._engine.predict(context, cutoff))
+        prediction_context = ClinicalContext(
+            cohort_id=context.cohort_id,
+            manifest_checksum=context.manifest_checksum,
+            generator_version=context.generator_version,
+            seed=context.seed,
+            patient=PatientDetail(
+                patient=context.patient.patient,
+                ehr_history=[event for event in context.patient.ehr_history if event.event_time <= cutoff],
+                iot_observations=[item for item in context.patient.iot_observations if item.observed_at <= cutoff],
+            ),
+        )
+        prediction = validate_aki_prediction_result(self._engine.predict(prediction_context, cutoff))
         envelope = ClinicalResultEnvelope(clinical_rule=clinical_rule, prediction=prediction)
         existing = self._repository.get_existing_clinical_results(context, envelope)
         if existing is not None:

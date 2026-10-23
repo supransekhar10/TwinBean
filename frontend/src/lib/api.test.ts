@@ -1,6 +1,16 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { ApiError, fetchDoctorDashboard, fetchDoctorHealth, fetchPatientTwin } from "./api";
+import { ApiError, fetchDoctorDashboard, fetchDoctorHealth, fetchPatientTwin, resolveApiBaseUrl } from "./api";
+
+describe("resolveApiBaseUrl", () => {
+  it("uses the page host when a LAN browser cannot use the configured loopback host", () => {
+    expect(resolveApiBaseUrl("http://localhost:8000", "192.168.1.23")).toBe("http://192.168.1.23:8000");
+  });
+
+  it("keeps localhost for local browser access", () => {
+    expect(resolveApiBaseUrl("http://localhost:8000", "localhost")).toBe("http://localhost:8000");
+  });
+});
 
 describe("fetchDoctorHealth", () => {
   afterEach(() => vi.unstubAllGlobals());

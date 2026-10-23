@@ -1,4 +1,5 @@
 from fastapi.testclient import TestClient
+import pytest
 import subprocess
 import sys
 
@@ -20,11 +21,15 @@ def test_authenticated_health_requires_token() -> None:
     assert response.status_code == 401
 
 
-def test_cors_preflight_allows_review_note_post_from_frontend() -> None:
+@pytest.mark.parametrize(
+    "origin",
+    ["http://localhost:3000", "http://localhost:3001", "http://192.168.1.23:3000", "http://192.168.1.23:3001"],
+)
+def test_cors_preflight_allows_review_note_post_from_frontend(origin: str) -> None:
     response = client.options(
         "/patients/tbp-11117e11ec4f5392b8b003c66adebd17/review-notes",
         headers={
-            "Origin": "http://localhost:3000",
+            "Origin": origin,
             "Access-Control-Request-Method": "POST",
             "Access-Control-Request-Headers": "authorization,content-type",
         },
@@ -32,6 +37,7 @@ def test_cors_preflight_allows_review_note_post_from_frontend() -> None:
 
     assert response.status_code == 200
     assert "POST" in response.headers["access-control-allow-methods"]
+    assert response.headers["access-control-allow-origin"] == origin
 
 
 def test_application_startup_does_not_import_native_ml_stack() -> None:

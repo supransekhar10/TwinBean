@@ -1,26 +1,59 @@
-# Frontend
-frontend/node_modules/
-frontend/.next/
-frontend/coverage/
+# Environment and secrets
+.env
+.env.*
+!.env.example
 frontend/.env*
 !frontend/.env.example
-
-# Backend
-backend/.venv/
-backend/.pytest_cache/
-backend/.cache/
-backend/*.egg-info/
-backend/**/__pycache__/
 backend/.env*
 !backend/.env.example
-
-# Firebase credentials
 *service-account*.json
 *firebase-adminsdk*.json
 firebase-admin-key.json
 
-# Local tooling
-.impeccable/review/
+# JavaScript / Next.js
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/coverage/
+frontend/.turbo/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
 
-# GSD runtime locks
-.planning/milestone.lock
+# Python
+backend/.venv/
+backend/venv/
+backend/.pytest_cache/
+backend/.cache/
+backend/.coverage
+backend/htmlcov/
+backend/*.egg-info/
+backend/**/__pycache__/
+*.py[cod]
+
+# Runtime output
+*.log
+*.pid
+*.tmp
+.tmp/
+tmp/
+output/
+
+# Editors and operating systems
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Local agent and planning tooling
+.agents/
+.claude/
+.codex/
+.gsd/
+.impeccable/
+.planning/
+skills-lock.json
+AGENTS.md
+CLAUDE.md

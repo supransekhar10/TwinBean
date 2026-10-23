@@ -193,7 +193,7 @@ def _verify_manifest(
         raise ArtifactIntegrityError("artifact freshness policy is incompatible")
     if manifest["label_version"] != LABEL_VERSION:
         raise ArtifactIntegrityError("artifact label definition is incompatible")
-    if manifest["explanation"] != {"model_output": "raw", "additivity_abs_tol": 1e-6, "semantics": "model_influence_not_causal"}:
+    if manifest["explanation"] != {"model_output": "raw", "additivity_abs_tol": 3e-6, "semantics": "model_influence_not_causal"}:
         raise ArtifactIntegrityError("artifact explanation contract is incompatible")
     _verify_cohort_metadata(manifest["cohort"])
     _verify_partition_metadata(manifest["partition"])

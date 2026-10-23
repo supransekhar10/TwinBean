@@ -14,7 +14,9 @@ from pathlib import Path
 from time import monotonic
 from typing import Annotated, Any, Literal, Mapping
 
+from google.api_core.exceptions import GoogleAPICallError
 from google.api_core.retry import Retry
+from google.cloud.firestore_v1.base_query import FieldFilter
 from pydantic import BaseModel, ConfigDict, Field
 
 from .firestore import get_firestore_client
@@ -30,6 +32,7 @@ MAX_BATCH_BYTES = 8 * 1024 * 1024
 MAX_DOCUMENT_BYTES = 900 * 1024
 DASHBOARD_CACHE_TTL_SECONDS = 300.0
 FIRESTORE_READ_TIMEOUT_SECONDS = 3.0
+FIRESTORE_SEED_VALIDATION_TIMEOUT_SECONDS = 30.0
 # Interactive reads fail fast. The UI owns retry so SDK-level retries cannot
 # leave clinicians staring at an indefinite loading state.
 _FIRESTORE_READ_RETRY = Retry(
@@ -108,6 +111,21 @@ class DashboardPatient(BaseModel):
     latest_review_at: datetime | None = None
 
 
+def _dashboard_has_stored_evidence(rows: list[DashboardPatient]) -> bool:
+    """Reject partial projections that would erase previously verified evidence."""
+
+    if not rows:
+        return False
+    return all(
+        row.current_rule is not None
+        and not (
+            row.prediction.status == "unavailable"
+            and "no_stored_prediction" in row.prediction.reasons
+        )
+        for row in rows
+    )
+
+
 class ReviewNote(BaseModel):
     model_config = ConfigDict(extra="forbid")
     note_id: str
@@ -158,7 +176,9 @@ class PatientRepository:
     def __init__(self, client: Any) -> None:
         self._client = client
         self._disk_cache_enabled = client.__class__.__module__.startswith("google.cloud.firestore")
+        self._bulk_reads_enabled = self._disk_cache_enabled
         self._dashboard_cache: dict[int, tuple[float, tuple[DashboardPatient, ...]]] = {}
+        self._validated_active_cohort: _ActiveCohort | None = None
 
     @classmethod
     def from_firestore(cls) -> "PatientRepository":
@@ -191,33 +211,89 @@ class PatientRepository:
         now = monotonic()
         if cached is not None and cached[0] > now:
             return [row.model_copy(deep=True) for row in cached[1]]
-        if not refresh and self._disk_cache_enabled:
-            disk_rows = self._load_dashboard_disk_cache(bounded_limit)
-            if disk_rows is not None:
+        disk_rows = self._load_dashboard_disk_cache(bounded_limit) if self._disk_cache_enabled else None
+        if not refresh and disk_rows is not None:
+            self._dashboard_cache[bounded_limit] = (
+                now + DASHBOARD_CACHE_TTL_SECONDS,
+                tuple(row.model_copy(deep=True) for row in disk_rows),
+            )
+            return disk_rows
+
+        try:
+            live_rows = self._load_live_dashboard_rows(bounded_limit, validate_cohort=refresh)
+        except GoogleAPICallError:
+            if refresh and disk_rows is not None:
                 self._dashboard_cache[bounded_limit] = (
                     now + DASHBOARD_CACHE_TTL_SECONDS,
                     tuple(row.model_copy(deep=True) for row in disk_rows),
                 )
                 return disk_rows
-
-        active = self._load_active_cohort()
-        if active is None:
+            raise
+        if live_rows is None:
+            if refresh and disk_rows is not None:
+                return disk_rows
             return []
+
+        sorted_rows = sorted(live_rows, key=_dashboard_sort_key)
+        if (
+            refresh
+            and disk_rows is not None
+            and _dashboard_has_stored_evidence(disk_rows)
+            and not _dashboard_has_stored_evidence(sorted_rows)
+        ):
+            self._dashboard_cache[bounded_limit] = (
+                now + DASHBOARD_CACHE_TTL_SECONDS,
+                tuple(row.model_copy(deep=True) for row in disk_rows),
+            )
+            return disk_rows
+        if self._disk_cache_enabled:
+            self._store_dashboard_disk_cache(bounded_limit, sorted_rows)
+            if refresh:
+                self._clear_patient_disk_cache()
+        self._dashboard_cache[bounded_limit] = (
+            now + DASHBOARD_CACHE_TTL_SECONDS,
+            tuple(row.model_copy(deep=True) for row in sorted_rows),
+        )
+        return sorted_rows
+
+    def _load_live_dashboard_rows(
+        self, bounded_limit: int, *, validate_cohort: bool = False
+    ) -> list[DashboardPatient] | None:
+        from .clinical_rules import ClinicalRuleResult
+        from .prediction_service import validate_aki_prediction_result
+
+        active = (
+            self._load_active_cohort_descriptor()
+            if validate_cohort and getattr(self, "_bulk_reads_enabled", False)
+            else self._load_active_cohort(force_validation=validate_cohort)
+        )
+        if active is None:
+            return None
         rows: list[DashboardPatient] = []
         review_statuses = self._load_review_statuses()
+        bulk_rules = bulk_predictions = None
+        if getattr(self, "_bulk_reads_enabled", False):
+            bulk_rules = self._latest_clinical_result_payloads_for_active(
+                active, "clinical_rules", "clinical_rule", "calculation_time"
+            )
+            bulk_predictions = self._latest_clinical_result_payloads_for_active(
+                active, "aki_predictions", "aki_prediction", "generated_at"
+            )
         for patient in self._list_patients_for_active(active, bounded_limit):
-            rules = [
-                ClinicalRuleResult.model_validate(payload)
-                for payload in self._list_clinical_result_payloads_for_active(
+            if bulk_rules is None or bulk_predictions is None:
+                rule_payloads = self._list_clinical_result_payloads_for_active(
                     active, patient.patient_id, 1, "clinical_rules", "clinical_rule", "calculation_time"
                 )
-            ]
-            predictions = [
-                validate_aki_prediction_result(payload)
-                for payload in self._list_clinical_result_payloads_for_active(
+                prediction_payloads = self._list_clinical_result_payloads_for_active(
                     active, patient.patient_id, 1, "aki_predictions", "aki_prediction", "generated_at"
                 )
-            ]
+            else:
+                rule_payload = bulk_rules.get(patient.patient_id)
+                prediction_payload = bulk_predictions.get(patient.patient_id)
+                rule_payloads = [] if rule_payload is None else [rule_payload]
+                prediction_payloads = [] if prediction_payload is None else [prediction_payload]
+            rules = [ClinicalRuleResult.model_validate(payload) for payload in rule_payloads]
+            predictions = [validate_aki_prediction_result(payload) for payload in prediction_payloads]
             current_rule = None
             if rules:
                 rule = rules[0]
@@ -246,16 +322,41 @@ class PatientRepository:
                     warnings=stored.warnings,
                 )
             rows.append(DashboardPatient(patient=patient, current_rule=current_rule, prediction=prediction, latest_review_at=review_statuses.get(patient.patient_id)))
-        sorted_rows = sorted(rows, key=_dashboard_sort_key)
-        if self._disk_cache_enabled:
-            self._store_dashboard_disk_cache(bounded_limit, sorted_rows)
-            if refresh:
-                self._clear_patient_disk_cache()
-        self._dashboard_cache[bounded_limit] = (
-            now + DASHBOARD_CACHE_TTL_SECONDS,
-            tuple(row.model_copy(deep=True) for row in sorted_rows),
-        )
-        return sorted_rows
+        return rows
+
+    def _latest_clinical_result_payloads_for_active(
+        self,
+        active: _ActiveCohort,
+        collection: str,
+        result_type: str,
+        order_field: str,
+    ) -> dict[str, dict[str, object]]:
+        """Load one active cohort's newest results with one collection-group read."""
+
+        snapshots = self._client.collection_group(collection).where(
+            filter=FieldFilter("cohort_id", "==", active.cohort_id)
+        ).stream(retry=_FIRESTORE_READ_RETRY, timeout=FIRESTORE_READ_TIMEOUT_SECONDS)
+        latest: dict[str, tuple[datetime, dict[str, object]]] = {}
+        count = 0
+        for snapshot in snapshots:
+            count += 1
+            if count > active.patient_count * MAX_CLINICAL_RESULT_RECORDS:
+                raise ValueError("active cohort clinical result history exceeds its bounded limit")
+            payload = snapshot.to_dict() or {}
+            patient_id = _required_identifier(payload, "patient_id", _PATIENT_ID)
+            result_id = _required_str(payload, "result_id")
+            expected_path = f"{_patient_path(active.cohort_id, patient_id)}/{collection}/{result_id}"
+            actual_path = getattr(getattr(snapshot, "reference", None), "path", "")
+            if actual_path != expected_path:
+                raise ValueError("clinical result path does not match its active patient ownership")
+            response_payload = _clinical_result_response_payload(
+                payload, active, patient_id, result_type
+            )
+            timestamp = _utc_timestamp(response_payload.get(order_field))
+            current = latest.get(patient_id)
+            if current is None or timestamp > current[0]:
+                latest[patient_id] = (timestamp, response_payload)
+        return {patient_id: value[1] for patient_id, value in latest.items()}
 
     @staticmethod
     def _dashboard_cache_path(limit: int) -> Path:
@@ -665,16 +766,19 @@ class PatientRepository:
         )
         transaction.commit()
 
-    def _load_active_cohort(self) -> _ActiveCohort | None:
+    def _load_active_cohort(self, *, force_validation: bool = False) -> _ActiveCohort | None:
         pointer = self._client.document(ACTIVE_COHORT_PATH).get(
             retry=_FIRESTORE_READ_RETRY, timeout=FIRESTORE_READ_TIMEOUT_SECONDS
         ).to_dict()
         if pointer is None:
             return None
         active = _active_from_data(pointer)
+        if not force_validation and self._validated_active_cohort == active:
+            return active
         staged = self._validate_staged_cohort(active.cohort_id)
         if staged != active:
             raise ValueError("active cohort pointer does not exactly match its validated cohort")
+        self._validated_active_cohort = active
         return active
 
     def _load_active_cohort_descriptor(self) -> _ActiveCohort | None:
@@ -696,14 +800,20 @@ class PatientRepository:
         if not _COHORT_ID.fullmatch(cohort_id):
             raise ValueError("cohort identifier is not a TwinBean immutable version")
         descriptor = self._cohort_document(cohort_id).get(
-            retry=_FIRESTORE_READ_RETRY, timeout=FIRESTORE_READ_TIMEOUT_SECONDS
+            retry=_FIRESTORE_READ_RETRY, timeout=FIRESTORE_SEED_VALIDATION_TIMEOUT_SECONDS
         ).to_dict()
         active = _active_from_data(descriptor or {})
         if active.cohort_id != cohort_id:
             raise ValueError("staged cohort descriptor ownership does not match its path")
         manifest: list[tuple[str, dict[str, object]]] = []
-        patient_snapshots = self._cohort_document(cohort_id).collection("patients").stream(
-            retry=_FIRESTORE_READ_RETRY, timeout=FIRESTORE_READ_TIMEOUT_SECONDS
+        # Materialize the bounded patient roots before validating child streams.
+        # Otherwise the parent gRPC stream remains open during every subcollection
+        # read and can expire even though the small parent query completed quickly.
+        patient_snapshots = list(
+            self._cohort_document(cohort_id).collection("patients").stream(
+                retry=_FIRESTORE_READ_RETRY,
+                timeout=FIRESTORE_SEED_VALIDATION_TIMEOUT_SECONDS,
+            )
         )
         patient_count = ehr_count = iot_count = 0
         for root_snapshot in patient_snapshots:
@@ -715,7 +825,7 @@ class PatientRepository:
             manifest.append((root_path, dict(root_data)))
             document = self._client.document(root_path)
             for snapshot in document.collection("ehr_events").stream(
-                retry=_FIRESTORE_READ_RETRY, timeout=FIRESTORE_READ_TIMEOUT_SECONDS
+                retry=_FIRESTORE_READ_RETRY, timeout=FIRESTORE_SEED_VALIDATION_TIMEOUT_SECONDS
             ):
                 data = snapshot.to_dict() or {}
                 event = self._ehr_event_from_data(data, active, patient.patient_id)
@@ -723,7 +833,7 @@ class PatientRepository:
                 ehr_count += 1
                 manifest.append((f"{root_path}/ehr_events/{event.event_id}", dict(data)))
             for snapshot in document.collection("iot_observations").stream(
-                retry=_FIRESTORE_READ_RETRY, timeout=FIRESTORE_READ_TIMEOUT_SECONDS
+                retry=_FIRESTORE_READ_RETRY, timeout=FIRESTORE_SEED_VALIDATION_TIMEOUT_SECONDS
             ):
                 data = snapshot.to_dict() or {}
                 observation = self._iot_observation_from_data(data, active, patient.patient_id)

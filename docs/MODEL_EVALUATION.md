@@ -4,8 +4,8 @@
 
 ## Design
 
-- Dataset: 80 deterministic synthetic adult CKD patients; generator is not Synthea.
-- Split: 60 training and 20 held-out patients; overlap 0.
+- Dataset: 100 deterministic synthetic adult CKD patients; generator is not Synthea.
+- Split: 74 training and 26 held-out patients; overlap 0.
 - Both models use the same held-out patients and the same time-safe cutoff.
 - EHR-only excludes the simulated IoT blood-pressure feature; combined includes it.
 
@@ -13,8 +13,8 @@
 
 | Model | ROC AUC | Average precision | Brier score | Log loss | Accuracy at 0.5 |
 |---|---:|---:|---:|---:|---:|
-| ehr_only | 0.605 | 0.596 | 0.265 | 0.744 | 0.550 |
-| combined_ehr_iot | 0.510 | 0.629 | 0.297 | 0.806 | 0.500 |
+| ehr_only | 0.781 | 0.841 | 0.204 | 0.656 | 0.692 |
+| combined_ehr_iot | 0.811 | 0.859 | 0.188 | 0.600 | 0.769 |
 
 ## Leakage Controls
 

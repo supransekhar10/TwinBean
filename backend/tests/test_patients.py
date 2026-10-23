@@ -340,6 +340,23 @@ def test_clinical_result_histories_are_distinct_bounded_and_newest_first() -> No
     assert "evidence" not in predictions[0].model_dump()
 
 
+def test_validated_active_cohort_is_reused_while_pointer_is_unchanged(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client = MemoryFirestore()
+    repository = PatientRepository(client)
+    repository.write_cohort(_cohort(25))
+    assert len(repository.list_patients(100)) == 1
+    monkeypatch.setattr(
+        repository,
+        "_validate_staged_cohort",
+        lambda _cohort_id: (_ for _ in ()).throw(AssertionError("cohort must not be rescanned")),
+    )
+
+    assert len(repository.list_patients(100)) == 1
+    assert len(repository.list_patients(100)) == 1
+
+
 def test_cli_reports_only_non_sensitive_seed_summary(monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> None:
     from scripts import seed_synthetic_data
 

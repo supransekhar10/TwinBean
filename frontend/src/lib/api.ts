@@ -36,11 +36,18 @@ export type ClinicalRuleResult = DashboardClinicalRule & {
 };
 
 export type ReviewNote = { note_id: string; patient_id: string; author_uid: string; text: string; created_at: string };
+export type TwiniMessage = { role: "user" | "assistant"; content: string };
+export type TwiniResponse = {
+  answer: string;
+  citations: Array<{ source: string; label: string }>;
+  patient_context_used: boolean;
+  disclaimer: string;
+};
 
 export type AkiPrediction =
   | (Extract<DashboardPrediction, { status: "unavailable" }>)
   | (Extract<DashboardPrediction, { status: "available" }> & {
-      attributions: Array<{ feature: string; value: number; shap_margin: number; semantics: string }>;
+      attributions: Array<{ feature: string; value: number; expected_value: number; shap_margin: number; semantics: string }>;
     });
 
 export class ApiError extends Error {
@@ -49,14 +56,33 @@ export class ApiError extends Error {
   }
 }
 
-const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
+const configuredApiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
 const requestTimeoutMs = 8_000;
+const accessCheckTimeoutMs = 2_500;
 
-async function fetchWithTimeout(path: string, idToken: string): Promise<Response> {
-  const controller = new AbortController();
-  const timeout = window.setTimeout(() => controller.abort(), requestTimeoutMs);
+export function resolveApiBaseUrl(configuredUrl: string, browserHostname?: string): string {
+  if (!browserHostname || ["localhost", "127.0.0.1"].includes(browserHostname)) return configuredUrl;
   try {
-    return await fetch(`${apiBaseUrl}${path}`, {
+    const url = new URL(configuredUrl);
+    if (["localhost", "127.0.0.1"].includes(url.hostname)) {
+      url.hostname = browserHostname;
+      return url.origin;
+    }
+  } catch {
+    return configuredUrl;
+  }
+  return configuredUrl;
+}
+
+function getApiBaseUrl(): string {
+  return resolveApiBaseUrl(configuredApiBaseUrl, typeof window === "undefined" ? undefined : window.location.hostname);
+}
+
+async function fetchWithTimeout(path: string, idToken: string, timeoutMs = requestTimeoutMs): Promise<Response> {
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(`${getApiBaseUrl()}${path}`, {
       headers: { Authorization: `Bearer ${idToken}` },
       signal: controller.signal,
     });
@@ -71,7 +97,7 @@ async function fetchWithTimeout(path: string, idToken: string): Promise<Response
 }
 
 export async function fetchDoctorHealth(idToken: string): Promise<DoctorHealth> {
-  const response = await fetchWithTimeout("/health/authenticated", idToken);
+  const response = await fetchWithTimeout("/health/authenticated", idToken, accessCheckTimeoutMs);
 
   if (!response.ok) {
     const body = (await response.json().catch(() => null)) as { detail?: string } | null;
@@ -79,6 +105,19 @@ export async function fetchDoctorHealth(idToken: string): Promise<DoctorHealth> 
   }
 
   return response.json() as Promise<DoctorHealth>;
+}
+
+export async function askTwini(question: string, patientId: string | null, history: TwiniMessage[], idToken: string): Promise<TwiniResponse> {
+  const response = await fetch(`${getApiBaseUrl()}/assistant/chat`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${idToken}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ question, patient_id: patientId, history: history.slice(-10) }),
+  });
+  if (!response.ok) {
+    const body = (await response.json().catch(() => null)) as { detail?: string } | null;
+    throw new ApiError(response.status, body?.detail ?? "Twini could not answer right now.");
+  }
+  return response.json() as Promise<TwiniResponse>;
 }
 
 export async function fetchDoctorDashboard(idToken: string, refresh = false): Promise<DashboardPatient[]> {
@@ -111,7 +150,13 @@ export async function fetchReviewNotes(patientId: string, idToken: string): Prom
 }
 
 export async function createReviewNote(patientId: string, text: string, idToken: string): Promise<ReviewNote> {
-  const response = await fetch(`${apiBaseUrl}/patients/${encodeURIComponent(patientId)}/review-notes`, { method: "POST", headers: { Authorization: `Bearer ${idToken}`, "Content-Type": "application/json" }, body: JSON.stringify({ text }) });
+  const response = await fetch(`${getApiBaseUrl()}/patients/${encodeURIComponent(patientId)}/review-notes`, { method: "POST", headers: { Authorization: `Bearer ${idToken}`, "Content-Type": "application/json" }, body: JSON.stringify({ text }) });
   if (!response.ok) throw new ApiError(response.status, "Review note could not be saved.");
   return response.json() as Promise<ReviewNote>;
+}
+
+export async function downloadPatientReport(patientId: string, idToken: string): Promise<Blob> {
+  const response = await fetchWithTimeout(`/patients/${encodeURIComponent(patientId)}/report.pdf`, idToken);
+  if (!response.ok) throw new ApiError(response.status, "Patient report could not be generated.");
+  return response.blob();
 }

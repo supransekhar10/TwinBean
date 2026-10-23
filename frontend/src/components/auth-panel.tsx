@@ -14,6 +14,9 @@ function friendlyAuthError(error: unknown): string {
   if (error instanceof Error && error.message.includes("Doctor access is required")) {
     return "This account is not approved for doctor access.";
   }
+  if (error instanceof TypeError) {
+    return "Signed in, but the protected backend could not be reached. Check that the TwinBean API is running.";
+  }
   return "Sign-in could not be completed. Please try again.";
 }
 
@@ -23,9 +26,10 @@ export function AuthPanel() {
   const [password, setPassword] = useState("");
   const [working, setWorking] = useState(false);
   const [message, setMessage] = useState("");
+  const [authChecked, setAuthChecked] = useState(false);
 
   useEffect(() => onAuthStateChanged(firebaseAuth, async (user) => {
-    if (!user) return;
+    if (!user) { setAuthChecked(true); return; }
     setWorking(true);
     try {
       await fetchDoctorHealth(await user.getIdToken());
@@ -34,6 +38,7 @@ export function AuthPanel() {
       await signOut(firebaseAuth);
       setMessage(friendlyAuthError(error));
       setWorking(false);
+      setAuthChecked(true);
     }
   }), [router]);
 
@@ -66,15 +71,15 @@ export function AuthPanel() {
 
       <div className="field-group">
         <label htmlFor="email">Email address</label>
-        <input autoComplete="email" id="email" onChange={(event) => setEmail(event.target.value)} required type="email" value={email} />
+        <input autoComplete="email" disabled={!authChecked || working} id="email" onChange={(event) => setEmail(event.target.value)} required type="email" value={email} />
       </div>
       <div className="field-group">
         <label htmlFor="password">Password</label>
-        <input autoComplete="current-password" id="password" minLength={6} onChange={(event) => setPassword(event.target.value)} required type="password" value={password} />
+        <input autoComplete="current-password" disabled={!authChecked || working} id="password" minLength={6} onChange={(event) => setPassword(event.target.value)} required type="password" value={password} />
       </div>
 
       {message && <p className="error-message" role="alert">{message}</p>}
-      <button className="primary-button primary-button--full" disabled={working} type="submit">
+      <button className="primary-button primary-button--full" disabled={!authChecked || working} type="submit">
         {working ? "Signing in..." : "Sign in"}
       </button>
       <p className="form-note">Access is limited to approved doctor accounts.</p>

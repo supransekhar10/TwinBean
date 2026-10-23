@@ -376,6 +376,36 @@ def test_verified_engine_returns_a_complete_released_bundle_forecast() -> None:
     assert all(item.expected_value is not None for item in result.attributions)
 
 
+def test_verified_engine_fails_closed_when_native_dependencies_are_blocked(monkeypatch) -> None:
+    context = ClinicalContext(
+        cohort_id="cohort-0123456789abcdef01234567",
+        manifest_checksum="a" * 64,
+        generator_version="2026.1",
+        seed=31,
+        patient=PatientDetail(
+            patient=PatientSummary(
+                patient_id=PATIENT_ID,
+                display_name="Synthetic CKD Patient",
+                age=64,
+                ckd_stage="G3b",
+            ),
+            ehr_history=[],
+            iot_observations=[],
+        ),
+    )
+
+    def blocked_dependencies():
+        raise ImportError("blocked by application control")
+
+    monkeypatch.setattr(prediction_service_module, "_load_prediction_dependencies", blocked_dependencies)
+
+    result = prediction_service_module.VerifiedPredictionEngine().predict(context, CUTOFF)
+
+    assert result.status == "unavailable"
+    assert result.reasons == ["model_engine_unavailable"]
+    assert not hasattr(result, "probability")
+
+
 def test_doctor_can_read_separate_bounded_rule_and_prediction_histories(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

@@ -1,0 +1,62 @@
+{
+  "clinical_validated": false,
+  "code_revision": "81d9d6b3138913889b7756175415369ad6ce1947",
+  "cohort": {
+    "generator_version": "phase2-v2",
+    "patient_count": 100,
+    "seed": 20261008,
+    "snapshot_sha256": "44f4f19c399d3d3c614ae12f10fab000646393e17aa2c26a573464d3750f9706",
+    "time_basis": "2026-01-01T00:00:00Z"
+  },
+  "explanation": {
+    "additivity_abs_tol": 3e-06,
+    "model_output": "raw",
+    "semantics": "model_influence_not_causal"
+  },
+  "feature_schema": {
+    "raw_feature_columns": [
+      "age_years",
+      "latest_creatinine_mg_dl",
+      "creatinine_delta_48h_mg_dl",
+      "latest_systolic_bp_mmhg"
+    ],
+    "schema_version": "aki-combined-2026.10.04",
+    "units": {
+      "age_years": "years",
+      "creatinine_delta_48h_mg_dl": "mg/dL",
+      "latest_creatinine_mg_dl": "mg/dL",
+      "latest_systolic_bp_mmhg": "mmHg"
+    }
+  },
+  "format_version": 1,
+  "freshness_policy": {
+    "maximum_age_hours": 24,
+    "version": "required-observation-24h-2026.10.04"
+  },
+  "label_version": "new-aki-24h-2026.10.04",
+  "members": {
+    "feature-schema.json": "b0d51afc235e74bcc371e7e67433494f97140322eaf38fa3004e56e6867bc196",
+    "pipeline.joblib": "33040ed4f121ffd0577c2ad5b6121662e93e13fcf0971514b564fd277465e9b7"
+  },
+  "model_version": "aki-24h-2026.10.08b",
+  "package_versions": {
+    "pandas": "3.0.6",
+    "scikit-learn": "1.9.1",
+    "shap": "0.52.0",
+    "xgboost": "3.4.1"
+  },
+  "partition": {
+    "development_group_digest": "f2cceee8b7a516d9e296143e1b760bf35ddcf6f5faeef047435cd44992bd755a",
+    "held_out_group_digest": "5cd61528fa54a1318c48359a3a48c342f6518bbfd58aa3be982b35da1920214a",
+    "held_out_patient_count": 25,
+    "train_group_digest": "6b7dd2273071f76058113317acaa3508e2fb97425a897a7b2a3ffbaf9bf8299d"
+  },
+  "python_version": "3.12.10",
+  "synthetic_research_use": true,
+  "transformed_feature_columns": [
+    "age_years",
+    "latest_creatinine_mg_dl",
+    "creatinine_delta_48h_mg_dl",
+    "latest_systolic_bp_mmhg"
+  ]
+}

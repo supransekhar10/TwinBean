@@ -6,7 +6,7 @@ TwinBean uses a project-local deterministic generator. It does **not** use Synth
 
 `backend/app/synthetic_data.py` exposes `generate_cohort(seed, generator_version, time_basis, patient_count)`. The same four inputs produce the same patient, EHR-event, and IoT-observation IDs, values, UTC timestamps, and serialized payloads. Changing the seed changes the cohort.
 
-For a local demonstration while Firestore is temporarily unavailable, run `python -m scripts.build_local_demo_snapshot` from `backend`. This writes an ignored, backend-only cache explicitly labeled `local_deterministic_synthetic_fallback`. It contains both streams and marks predictions unavailable; it is not represented as Firestore data or clinical validation. A later successful **Refresh from Firestore** replaces the dashboard snapshot and invalidates the fallback patient cache.
+For a local demonstration while Firestore is temporarily unavailable, run `python -m scripts.build_local_demo_snapshot` from `backend`. This writes an ignored, backend-only cache explicitly labeled `local_deterministic_synthetic_model_snapshot`. It contains both streams plus outputs from the controlled local model artifact; it is not represented as Firestore data or clinical validation. **Refresh Data** reads the active Firestore cohort and replaces the snapshot only when stored rule and prediction evidence is present, so an incomplete or failed refresh cannot erase the last complete view.
 
 The explicit backend command is:
 

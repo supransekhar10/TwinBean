@@ -328,12 +328,33 @@ def generate_cohort(
             "G3b": 1.85,
             "G4": 2.75,
         }[stage] + ((seed + index) % 5) * 0.01
-        worsening_trajectory = index % 2 == 1
+
+        # Build varied, cutoff-visible risk profiles without leaking the future
+        # outcome into the feature frame. Stage, age, blood pressure and a small
+        # deterministic patient-level component influence both the pre-cutoff
+        # trajectory and the probability of a next-24-hour synthetic event.
+        stage_risk = {"G3a": 0.12, "G3b": 0.36, "G4": 0.62}[stage]
+        age_risk = max(0.0, min(0.22, (patient.age - 42) / 42 * 0.22))
+        patient_variation = random.uniform(-0.18, 0.18)
+        latent_risk = max(0.02, min(0.98, stage_risk + age_risk + patient_variation))
+        # The future event is sampled deterministically from the seeded RNG,
+        # making the cohort reproducible while preserving realistic overlap
+        # between low-, intermediate-, and high-risk feature profiles.
+        worsening_trajectory = random.random() < latent_risk
+        pre_cutoff_rise = max(0.0, min(0.24, (latent_risk - 0.20) * 0.30))
+        # One-third of the cohort has an explicit current creatinine-rule-positive
+        # profile. For an 18-patient demo this yields six varied review cases.
+        # The rise ends at the prediction cutoff, so it is observed evidence and
+        # remains separate from the sampled next-24-hour outcome.
+        if index % 3 == 0:
+            pre_cutoff_rise = 0.35 + (index % 2) * 0.02
         for terminal_index, days_from_cutoff in enumerate(range(-7, 2)):
             event_time = terminal_cutoff + timedelta(days=days_from_cutoff)
             value = terminal_baseline
+            if -2 <= days_from_cutoff <= 0:
+                value += pre_cutoff_rise * ((days_from_cutoff + 2) / 2)
             if days_from_cutoff == 1:
-                value += 0.30 if worsening_trajectory else 0.05
+                value += max(0.35, pre_cutoff_rise + 0.25) if worsening_trajectory else pre_cutoff_rise + 0.03
             event = EhrEvent(
                 event_id=_stable_id(
                     "ehr", version, seed, patient_id, "terminal-creatinine", terminal_index
@@ -359,7 +380,7 @@ def generate_cohort(
             observed_at=terminal_cutoff,
             data=_frozen_data(
                 {
-                    "systolic": 118 + ((seed + index * 7) % 31),
+                    "systolic": round(108 + latent_risk * 58),
                     "diastolic": 72 + ((seed + index * 3) % 13),
                     "unit": "mmHg",
                 }

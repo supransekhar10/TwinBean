@@ -10,6 +10,7 @@ const executablePath = process.env.EDGE_PATH ??
 const reviewDir = path.resolve(process.cwd(), "..", ".impeccable", "review");
 const viewports = [
   { name: "mobile", width: 390, height: 844 },
+  { name: "laptop", width: 1024, height: 900 },
   { name: "desktop", width: 1440, height: 1000 },
 ];
 const selectors = [
@@ -24,7 +25,9 @@ const selectors = [
 ];
 const dashboardSelectors = [
   ".dashboard-shell",
-  ".dashboard-bar",
+  ".clinician-sidebar",
+  ".sidebar-nav",
+  ".dashboard-content",
   ".dashboard-intro",
   ".dashboard",
   ".dashboard-heading",
@@ -51,7 +54,7 @@ try {
       return { documentWidth: document.documentElement.scrollWidth, viewportWidth: document.documentElement.clientWidth, elements };
     }, selectors);
     await page.evaluate(() => {
-      document.body.innerHTML = `<main class="dashboard-shell"><header class="dashboard-bar"><div class="wordmark"><span class="wordmark-mark">TB</span><span>TwinBean</span></div><div class="account-menu"><span>doctor.demo@example.com</span><button class="text-button">Sign out</button></div></header><section class="dashboard-intro"><div><p class="context-label">Doctor dashboard</p><h1>Monitored patients</h1><p>Review current clinical evidence and future 24-hour AKI risk as separate signals.</p></div><span class="prototype-label">Research prototype / synthetic data only</span></section><section class="dashboard" aria-labelledby="patient-list-heading"><div class="dashboard-heading"><div><p class="context-label">Active synthetic cohort</p><h2 id="patient-list-heading">Risk-prioritized monitored patients</h2><p>Valid forecasts are ordered by highest predicted 24-hour AKI risk. Every monitored patient remains accessible.</p></div><strong>2 monitored patients</strong></div><div class="desktop-dashboard"><table><caption>Risk-prioritized monitored patients</caption><thead><tr><th>Patient</th><th>Current clinical rule</th><th>24-hour AKI risk</th><th>Prediction generated</th><th>Data quality</th><th>Open</th></tr></thead><tbody><tr><td><div class="patient-identity"><strong>A very long synthetic patient name used to verify safe wrapping</strong><span>Age 71 / CKD stage G4</span></div></td><td>Criteria not met</td><td><div class="risk-region"><strong>82%</strong></div></td><td>Oct 5, 2026, 8:01 AM UTC</td><td><span class="quality-warning">Simulated IoT data is stale and requires review before navigation.</span></td><td><a class="open-patient" href="#">Open patient</a></td></tr></tbody></table></div><ol class="mobile-dashboard"><li><div class="patient-identity"><strong>A very long synthetic patient name used to verify safe wrapping</strong><span>Age 63 / CKD stage G3b</span></div><div class="risk-region"><span class="data-label">24-hour AKI risk</span><strong>Risk unavailable</strong></div><div><span class="data-label">Prediction generated</span><span>Not available</span></div><div class="quality-warning"><span class="data-label">Data quality</span>No valid stored prediction is available.</div><div class="rule-region"><span class="data-label">Current clinical rule</span><strong>Insufficient creatinine history</strong></div><a class="open-patient" href="#">Open patient</a></li></ol></section></main>`;
+      document.body.innerHTML = `<main class="dashboard-shell"><aside class="clinician-sidebar"><a class="sidebar-brand" href="#"><span class="wordmark-mark">TB</span><div><strong>TwinBean</strong><span>Kidney digital twin</span></div></a><nav class="sidebar-nav"><a class="sidebar-link sidebar-link--overview" href="#">Overview</a><a class="sidebar-link sidebar-link--patients sidebar-link--active" href="#">Monitored patients</a><a class="sidebar-link sidebar-link--reviews" href="#">Review workspace</a><a class="sidebar-link sidebar-link--reports" href="#">Patient reports</a><a class="sidebar-link sidebar-link--assistant" href="#">Twini assistant</a><button class="sidebar-link sidebar-link--refresh">Refresh Data</button></nav><div class="sidebar-account"><span>Signed in as</span><strong>doctor.demo@example.com</strong><button class="sidebar-signout">Sign out</button></div></aside><div class="dashboard-content"><section class="dashboard-intro"><div><p class="context-label">Doctor dashboard</p><h1>Monitored patients</h1><p>Review current clinical evidence and future 24-hour AKI risk as separate signals.</p></div><span class="prototype-label">Research prototype / synthetic data only</span></section><section class="dashboard" aria-labelledby="patient-list-heading"><div class="dashboard-heading"><div><p class="context-label">Active synthetic cohort</p><h2 id="patient-list-heading">Risk-prioritized monitored patients</h2><p>Valid forecasts are ordered by highest predicted 24-hour AKI risk. Every monitored patient remains accessible.</p></div><strong>2 monitored patients</strong></div><div class="desktop-dashboard"><table><caption>Risk-prioritized monitored patients</caption><thead><tr><th>Patient</th><th>Current clinical rule</th><th>Clinical priority</th><th>24-hour AKI risk</th><th>Prediction generated</th><th>Open</th></tr></thead><tbody><tr><td><div class="patient-identity"><strong>A very long synthetic patient name used to verify safe wrapping</strong><span>Age 71 / CKD stage G4</span></div></td><td>Criteria not met</td><td>High predicted risk</td><td><div class="risk-region"><strong>82%</strong></div></td><td>Oct 5, 2026, 8:01 AM UTC</td><td><a class="open-patient" href="#">Open patient</a></td></tr></tbody></table></div><ol class="mobile-dashboard"><li><div class="patient-identity"><strong>A very long synthetic patient name used to verify safe wrapping</strong><span>Age 63 / CKD stage G3b</span></div><div class="rule-region"><span class="data-label">Current clinical rule</span><strong>Criteria met</strong></div><div class="priority priority--urgent"><span class="data-label">Clinical priority</span><strong>Review now</strong></div><div class="risk-region"><span class="data-label">24-hour AKI risk</span><strong>82%</strong></div><div><span class="data-label">Prediction generated</span><span>Oct 5, 2026, 8:01 AM UTC</span></div><a class="open-patient" href="#">Open patient</a></li></ol></section></div></main>`;
     });
 
     const result = await page.evaluate((checkedSelectors) => {
@@ -80,11 +83,22 @@ try {
       fullPage: true,
     });
 
-    const offenders = [...loginResult.elements, ...result.elements].filter(
+    const twiniResult = await page.evaluate(() => {
+      document.body.insertAdjacentHTML("beforeend", `<aside class="twini-drawer is-open has-context" aria-label="Twini assistant panel"><header><div><span>Project-grounded assistant</span><h2>Twini</h2></div><button>×</button></header><div class="twini-drawer-context"><strong>Patient context active</strong><span>Answers can reference this synthetic patient record.</span></div><div class="twini-drawer-thread"><article class="twini-drawer-message is-assistant"><span>Twini</span><div class="twini-answer"><h3>What you are looking at</h3><p>A concise project-grounded summary.</p><div class="twini-answer-records"><section><div><strong>Piece</strong><p>Milestone roadmap with an intentionally long but readable name</p></div><div><strong>What it is</strong><p>The development plan for TwinBean.</p></div><div><strong>Key points</strong><p>Clinical rules, future predictions, and SHAP explanations remain separate.</p></div></section></div></div></article></div><form class="twini-drawer-composer"><label>Ask Twini</label><textarea placeholder="Type your question..."></textarea><button>Send</button><small>Synthetic research support, not diagnosis or treatment guidance.</small></form></aside>`);
+      const checkedSelectors = [".twini-drawer", ".twini-drawer-thread", ".twini-drawer-message", ".twini-answer-records"];
+      const elements = checkedSelectors.map((selector) => {
+        const element = document.querySelector(selector);
+        const rect = element.getBoundingClientRect();
+        return { selector, left: rect.left, right: rect.right, scrollWidth: element.scrollWidth, clientWidth: element.clientWidth, overflowsViewport: rect.left < -0.5 || rect.right > innerWidth + 0.5, overflowsContainer: element.scrollWidth > element.clientWidth + 1 };
+      });
+      return { documentWidth: document.documentElement.scrollWidth, viewportWidth: document.documentElement.clientWidth, elements };
+    });
+
+    const offenders = [...loginResult.elements, ...result.elements, ...twiniResult.elements].filter(
       (item) => item.missing || item.overflowsViewport || item.overflowsContainer,
     );
-    const viewportPass = loginResult.documentWidth <= loginResult.viewportWidth + 1 && result.documentWidth <= result.viewportWidth + 1 && offenders.length === 0;
-    console.log(JSON.stringify({ viewport, login: loginResult, dashboard: result, offenders, pass: viewportPass }));
+    const viewportPass = loginResult.documentWidth <= loginResult.viewportWidth + 1 && result.documentWidth <= result.viewportWidth + 1 && twiniResult.documentWidth <= twiniResult.viewportWidth + 1 && offenders.length === 0;
+    console.log(JSON.stringify({ viewport, login: loginResult, dashboard: result, twini: twiniResult, offenders, pass: viewportPass }));
     failed ||= !viewportPass;
     await page.close();
   }

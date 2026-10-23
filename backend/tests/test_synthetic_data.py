@@ -153,7 +153,8 @@ def test_terminal_trajectories_derive_both_label_classes_without_persisted_label
         statuses_at_cutoff[patient.patient_id] = calculate_creatinine_rule(history, cutoff).status
         statuses_after_cutoff[patient.patient_id] = calculate_creatinine_rule(history, TIME_BASIS).status
 
-    assert set(statuses_at_cutoff.values()) == {"criteria_not_met"}
+    assert list(statuses_at_cutoff.values()).count("criteria_met") == 2
+    assert list(statuses_at_cutoff.values()).count("criteria_not_met") == 4
     assert "criteria_met" in statuses_after_cutoff.values()
     assert "criteria_not_met" in statuses_after_cutoff.values()
     for event in cohort.ehr_events:
