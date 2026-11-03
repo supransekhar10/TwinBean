@@ -301,32 +301,6 @@ cd backend
 .\.venv\Scripts\python.exe -m scripts.evaluate_models
 ```
 
-## Demo video outline
-
-Record a 15–20 minute walkthrough and upload it as public or unlisted. A suggested flow:
-
-1. Team, problem statement, and why AKI in CKD is the chosen outcome.
-2. Architecture, privacy boundary, and two-stream data model.
-3. Synthetic cohort generation and provenance.
-4. Doctor authentication and protected API behavior.
-5. Dashboard, patient detail, current rules, 24-hour prediction, and `Risk unavailable` states.
-6. SHAP explanation, doctor notes, patient PDF, and Twini.
-7. Evaluation design, actual held-out metrics, limitations, and next steps.
-
-## Submission checklist
-
-- [x] Team leader, team member, and college information are documented.
-- [x] Project title, problem statement, and healthcare use case are documented.
-- [x] Technical stack and AI/ML framework details are documented.
-- [x] Deployed application and public demo credentials are documented.
-- [x] The public or unlisted YouTube demo link is included.
-- [x] MIT license details are included.
-- [x] Architecture diagram is included in this README, in the repository, and as a public Google Drive PDF.
-- [x] The project presentation is included in the repository and linked through Google Slides.
-- [x] The supplied presentation, architecture, deployment, and demo-video URLs return HTTP 200.
-- [x] The final GitHub repository is public and opens without requesting permission.
-- [ ] Rename the repository folder to `Team Name_College Name` before final submission if the organizer requires the local folder name to match.
-
 ## Limitations and next steps
 
 - Synthetic cohorts do not represent real prevalence, care pathways, sensor error, treatment effects, or population diversity.
