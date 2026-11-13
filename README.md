@@ -21,7 +21,6 @@
   <a href="https://docs.google.com/presentation/d/1jyrQI8YLM2UM95pPrBqGBxsJuASEmPam/edit?usp=sharing"><strong>Presentation</strong></a>
   &nbsp;&middot;&nbsp;
   <a href="https://drive.google.com/file/d/1iOhBH7e1AUC2HTvxhKT5BzyGBHJlsToT/view?usp=sharing"><strong>Architecture PDF</strong></a>
-  &nbsp;&middot;&nbsp;
 </p>
 
 ## Submission information
