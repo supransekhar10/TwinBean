@@ -22,7 +22,6 @@
   &nbsp;&middot;&nbsp;
   <a href="https://drive.google.com/file/d/1iOhBH7e1AUC2HTvxhKT5BzyGBHJlsToT/view?usp=sharing"><strong>Architecture PDF</strong></a>
   &nbsp;&middot;&nbsp;
-  <a href="https://youtu.be/INTJ57_fiSM"><strong>Demo Video</strong></a>
 </p>
 
 ## Submission information
@@ -36,7 +35,6 @@
 | College / incubator | **SRM Institute of Science and Technology** |
 | Healthcare use case | Predict and explain the risk of a new acute kidney injury (AKI) event within 24 hours for synthetic adults with chronic kidney disease (CKD). |
 | Deployed application | [https://twinbean.vercel.app/](https://twinbean.vercel.app/) - **desktop viewing is recommended** |
-| Demo video | [Watch the 15–20 minute TwinBean walkthrough on YouTube](https://youtu.be/INTJ57_fiSM) |
 | Architecture | [Public Google Drive PDF](https://drive.google.com/file/d/1iOhBH7e1AUC2HTvxhKT5BzyGBHJlsToT/view?usp=sharing), [repository PDF](TwinBean%20System%20Architecture.pdf), and the Mermaid diagram below |
 | Presentation | [Public Google Slides presentation](https://docs.google.com/presentation/d/1jyrQI8YLM2UM95pPrBqGBxsJuASEmPam/edit?usp=sharing) and [repository PPTX](TwinBean%20Presentation.pptx) |
 | License | [MIT License](LICENSE) |
@@ -66,10 +64,6 @@ These accounts contain synthetic demonstration data only. They are public demo c
 
 > [!CAUTION]
 > Do not reuse these passwords for personal, college, Firebase administrator, email, or other accounts. Never upload Firebase service-account files, private keys, API keys, or production credentials to GitHub.
-
-## Demo video
-
-Watch the complete TwinBean prototype walkthrough on YouTube: **[TwinBean Demo Video](https://youtu.be/INTJ57_fiSM)**.
 
 ## Problem statement
 
